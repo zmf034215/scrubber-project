@@ -29,4 +29,6 @@ if __name__ == "__main__":
                                                  -0.7412878036499023, -0.6774682998657227, -0.2993779182434082, 1.502809762954712, -0.04234027862548828, 0.027610667049884796, 0.0347219817340374] + hand_home_pos + [-math.pi/8, 0, 0, -math.pi/16],
 
                                             ]
+    time.sleep(0.1)
+    robot.MOVEL.whether_save_movel_position = 0
     robot.robot_movel_to_target_position()

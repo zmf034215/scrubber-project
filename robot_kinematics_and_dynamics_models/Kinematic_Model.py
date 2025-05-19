@@ -19,7 +19,7 @@ class Kinematic_Model:
         urdf_path = os.path.join(parent_folder, "models", "P5_right_arm.urdf")
         self.right_arm_pin_model = pinocchio.buildModelFromUrdf(urdf_path)
         self.right_arm_pin_data = self.right_arm_pin_model.createData()
-        print('model name: ' + self.left_arm_pin_model.name)
+        print('model name: ' + self.right_arm_pin_model.name)
 
         self.left_arm_interpolation_result = np.zeros(7)
         self.right_arm_interpolation_result = np.zeros(7)
@@ -43,8 +43,8 @@ class Kinematic_Model:
 
     def left_arm_inverse_kinematics(self, cart_interpolation_pose, cart_interpolation_position, current_joint_position):
         oMdes = pinocchio.SE3(np.array(cart_interpolation_pose), np.array(cart_interpolation_position))
-        eps    = 1e-3
-        IT_MAX = 500
+        eps    = 1e-7
+        IT_MAX = 1000
         DT     = 1e-1
         damp   = 1e-12
         q = current_joint_position
@@ -74,8 +74,8 @@ class Kinematic_Model:
 
     def right_arm_inverse_kinematics(self, cart_interpolation_pose, cart_interpolation_position, current_joint_position):
         oMdes = pinocchio.SE3(np.array(cart_interpolation_pose), np.array(cart_interpolation_position))
-        eps    = 1e-3
-        IT_MAX = 500
+        eps    = 1e-7
+        IT_MAX = 1000
         DT     = 1e-1
         damp   = 1e-12
         q = current_joint_position

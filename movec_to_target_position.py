@@ -17,4 +17,5 @@ if __name__ == "__main__":
                                                  -1.0877361297607422, -0.681267261505127, -0.4956197738647461, 0.8803613185882568, -0.0423884391784668, 0.02760806493461132, 0.03472469002008438] + hand_home_pos + [-math.pi/8, 0, 0, -math.pi/16],
                                             ]
     time.sleep(1)
+    robot.MOVEC.whether_save_movec_position = 0
     robot.robot_movec_to_target_position()

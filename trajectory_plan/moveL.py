@@ -1,23 +1,23 @@
-from ..lcm_handler import LCMHandler
+from lcm_handler import LCMHandler
 import numpy as np
 import time
-from seven_segment_speed_plan import seven_segment_speed_plan
+from trajectory_plan.seven_segment_speed_plan import seven_segment_speed_plan
 from copy import deepcopy
 import quaternion  # 这将 numpy 的 ndarray 类型扩展以支持四元数
 import pinocchio as pin
-from ..robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
+from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
 import csv
 
 
 class MOVEL():
     def __init__(self, LCMHandler):
         # lcm
-        self.lcm_handler = LCMHandler()
+        self.lcm_handler = LCMHandler
 
         # MOVEL的变量
-        self.movel_plan_jerk_max = 3
-        self.movel_plan_acc_max = 1.5
-        self.movel_plan_speed_max = 0.7
+        self.movel_plan_jerk_max = 0.75
+        self.movel_plan_acc_max = 0.5
+        self.movel_plan_speed_max = 0.2
         
         self.movel_plan_current_cart_position = None
         self.movel_plan_current_cart_pose = None
@@ -48,6 +48,7 @@ class MOVEL():
         self.right_arm_cart_interpolation_position = np.zeros(3)
         self.right_arm_cart_interpolation_pose = np.zeros((3, 3))
 
+        self.whether_save_movel_position = 0
         self.left_arm_inverse_kinematics_solution_success_flag = None
         self.right_arm_inverse_kinematics_solution_success_flag = None
 
@@ -71,10 +72,16 @@ class MOVEL():
             self.movel_plan_current_cart_position = deepcopy(left_arm_current_position.translation)
             self.movel_plan_current_cart_pose = deepcopy(left_arm_current_position.rotation)
             self.movel_plan_current_cart_quat = quaternion.from_rotation_matrix(self.movel_plan_current_cart_pose)
+            if self.whether_save_movel_position:
+                print("self.movel_plan_current_cart_position  = {} ".format(self.movel_plan_current_cart_position))
+                print("self.movel_plan_current_cart_pose  = {} ".format(self.movel_plan_current_cart_pose))
 
             self.movel_plan_target_cart_position = deepcopy(left_arm_target_position.translation)
             self.movel_plan_target_cart_pose = deepcopy(left_arm_target_position.rotation)
-            self.movel_plan_target_cart_quat = quaternion.from_rotation_matrix(self.movel_plan_target_cart_pose)    
+            self.movel_plan_target_cart_quat = quaternion.from_rotation_matrix(self.movel_plan_target_cart_pose)   
+            if self.whether_save_movel_position:
+                print("self.movel_plan_target_cart_position  = {} ".format(self.movel_plan_target_cart_position))
+                print("self.movel_plan_target_cart_pose  = {} ".format(self.movel_plan_target_cart_pose)) 
 
             self.movel_plan_displacement = np.linalg.norm(self.movel_plan_target_cart_position - self.movel_plan_current_cart_position)
             self.movel_plan_position_delta_disp[0] = self.movel_plan_target_cart_position[0] - self.movel_plan_current_cart_position[0] 
@@ -89,10 +96,16 @@ class MOVEL():
             self.right_arm_movel_plan_current_cart_position = deepcopy(right_arm_current_position.translation)
             self.right_arm_movel_plan_current_cart_pose = deepcopy(right_arm_current_position.rotation)
             self.right_arm_movel_plan_current_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movel_plan_current_cart_pose)
+            if self.whether_save_movel_position:
+                print("self.right_arm_movel_plan_current_cart_position  = {} ".format(self.right_arm_movel_plan_current_cart_position))
+                print("self.right_arm_movel_plan_current_cart_pose  = {} ".format(self.right_arm_movel_plan_current_cart_pose))
 
             self.right_arm_movel_plan_target_cart_position = deepcopy(right_arm_target_position.translation)
             self.right_arm_movel_plan_target_cart_pose = deepcopy(right_arm_target_position.rotation)
-            self.right_arm_movel_plan_target_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movel_plan_target_cart_pose)    
+            self.right_arm_movel_plan_target_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movel_plan_target_cart_pose)   
+            if self.whether_save_movel_position: 
+                print("self.right_arm_movel_plan_target_cart_position  = {} ".format(self.right_arm_movel_plan_target_cart_position))
+                print("self.right_arm_movel_plan_target_cart_pose  = {} ".format(self.right_arm_movel_plan_target_cart_pose))
 
             self.right_arm_movel_plan_displacement = np.linalg.norm(self.right_arm_movel_plan_target_cart_position - self.right_arm_movel_plan_current_cart_position)
             self.right_arm_movel_plan_position_delta_disp[0] = self.right_arm_movel_plan_target_cart_position[0] - self.right_arm_movel_plan_current_cart_position[0] 
@@ -104,7 +117,7 @@ class MOVEL():
 
 
     def movel_speed_plan_interpolation(self):
-
+        start_time = time.time()  # 记录循环开始的时间
         for interpolation_time in np.arange(0, self.speed_plan.time_length, self.interpolation_period / 1000):
             # start_time = time.time()  # 记录循环开始的时间
             if 0 <= interpolation_time <= self.speed_plan.accacc_time:
@@ -168,18 +181,52 @@ class MOVEL():
                 self.interpolation_result[7:14] = self.Kinematic_Model.right_arm_interpolation_result
                 self.interpolation_result[:7] = self.Kinematic_Model.left_arm_interpolation_result
 
+            if self.whether_save_movel_position:
+                self.interpolation_result_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.interpolation_result[:7]))
+                self.interpolation_result_cart_position = self.interpolation_result_cart.translation
+                self.interpolation_result_cart_pose = self.interpolation_result_cart.rotation
+                self.interpolation_result_cart_quat = quaternion.from_rotation_matrix(self.interpolation_result_cart_pose)
+
+                with open("movel_interpolate_trajectory.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.interpolation_result)
+
+                with open("movel_left_arm_interpolation_result_cart_position.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.interpolation_result_cart_position)
+
+                with open("movel_left_arm_interpolation_result_cart_pose.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.interpolation_result_cart_pose)
+
+                self.right_arm_interpolation_result_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.interpolation_result[7:14]))
+                self.right_arm_interpolation_result_cart_position = self.right_arm_interpolation_result_cart.translation
+                self.right_arm_interpolation_result_cart_pose = self.right_arm_interpolation_result_cart.rotation
+                self.right_arm_interpolation_result_cart_quat = quaternion.from_rotation_matrix(self.right_arm_interpolation_result_cart_pose)
+
+
+                with open("movel_right_arm_interpolation_result_cart_position.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.right_arm_interpolation_result_cart_position)
+
+                with open("movel_right_arm_interpolation_result_cart_pose.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.right_arm_interpolation_result_cart_pose)
+
             self.lcm_handler.upper_body_data_publisher(self.interpolation_result)            
             self.movel_plan_current_joint_position = self.interpolation_result
+
+
 
             # with open("interpolate_trajectory1.csv", 'a', newline='', encoding='utf-8') as csvfile:
             #     writer = csv.writer(csvfile)
             #     writer.writerow(self.interpolation_result)
 
 
-            # # 用于保证下发周期是2ms
-            # elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
-            # delay = max(0, self.interpolation_period / 1000 - elapsed_time)  # 4毫秒减去已经过的时间
-            # time.sleep(delay)  # 延迟剩余的时间
+            # 用于保证下发周期是2ms
+            elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
+            delay = max(0, self.interpolation_period / 1000 - elapsed_time)  # 4毫秒减去已经过的时间
+            time.sleep(delay)  # 延迟剩余的时间
 
 
         print("运行结束，到达目标点位！！！")
@@ -208,8 +255,9 @@ class MOVEL():
         self.movel_plan_current_cart_position = self.movel_plan_current_cart.translation
         self.movel_plan_current_cart_pose = self.movel_plan_current_cart.rotation
         self.movel_plan_current_cart_quat = quaternion.from_rotation_matrix(self.movel_plan_current_cart_pose)
-        # print("self.movel_plan_current_cart_position  = {} ".format(self.movel_plan_current_cart_position))
-        # print("self.movel_plan_current_cart_pose  = {} ".format(self.movel_plan_current_cart_pose))
+        if self.whether_save_movel_position:
+            print("self.movel_plan_current_cart_position  = {} ".format(self.movel_plan_current_cart_position))
+            print("self.movel_plan_current_cart_pose  = {} ".format(self.movel_plan_current_cart_pose))
 
 
         # 获取左臂期望位置对应的末端笛卡尔位置姿态和四元数
@@ -217,8 +265,9 @@ class MOVEL():
         self.movel_plan_target_cart_position = self.movel_plan_target_cart.translation
         self.movel_plan_target_cart_pose = self.movel_plan_target_cart.rotation
         self.movel_plan_target_cart_quat = quaternion.from_rotation_matrix(self.movel_plan_target_cart_pose)
-        # print("self.movel_plan_target_cart_position  = {} ".format(self.movel_plan_target_cart_position))
-        # print("self.movel_plan_target_cart_pose  = {} ".format(self.movel_plan_target_cart_pose))
+        if self.whether_save_movel_position:
+            print("self.movel_plan_target_cart_position  = {} ".format(self.movel_plan_target_cart_position))
+            print("self.movel_plan_target_cart_pose  = {} ".format(self.movel_plan_target_cart_pose))
 
 
         # 计算左臂规划需要总长度以及插补需要的各个变量
@@ -237,8 +286,9 @@ class MOVEL():
         self.right_arm_movel_plan_current_cart_position = self.right_arm_movel_plan_current_cart.translation
         self.right_arm_movel_plan_current_cart_pose = self.right_arm_movel_plan_current_cart.rotation
         self.right_arm_movel_plan_current_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movel_plan_current_cart_pose)
-        # print("self.right_arm_movel_plan_current_cart_position  = {} ".format(self.right_arm_movel_plan_current_cart_position))
-        # print("self.right_arm_movel_plan_current_cart_pose  = {} ".format(self.right_arm_movel_plan_current_cart_pose))
+        if self.whether_save_movel_position:
+            print("self.right_arm_movel_plan_current_cart_position  = {} ".format(self.right_arm_movel_plan_current_cart_position))
+            print("self.right_arm_movel_plan_current_cart_pose  = {} ".format(self.right_arm_movel_plan_current_cart_pose))
 
 
         # 获取右臂期望位置对应的末端笛卡尔位置姿态和四元数
@@ -246,8 +296,9 @@ class MOVEL():
         self.right_arm_movel_plan_target_cart_position = self.right_arm_movel_plan_target_cart.translation
         self.right_arm_movel_plan_target_cart_pose = self.right_arm_movel_plan_target_cart.rotation
         self.right_arm_movel_plan_target_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movel_plan_target_cart_pose)
-        # print("self.right_arm_movel_plan_target_cart_position  = {} ".format(self.right_arm_movel_plan_target_cart_position))
-        # print("self.right_arm_movel_plan_target_cart_pose  = {} ".format(self.right_arm_movel_plan_target_cart_pose))
+        if self.whether_save_movel_position:
+            print("self.right_arm_movel_plan_target_cart_position  = {} ".format(self.right_arm_movel_plan_target_cart_position))
+            print("self.right_arm_movel_plan_target_cart_pose  = {} ".format(self.right_arm_movel_plan_target_cart_pose))
 
 
         # 计算左臂规划需要总长度以及插补需要的各个变量

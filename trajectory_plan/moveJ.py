@@ -1,7 +1,7 @@
-from ..lcm_handler import LCMHandler
+from lcm_handler import LCMHandler
 import numpy as np
 import time
-from seven_segment_speed_plan import seven_segment_speed_plan
+from trajectory_plan.seven_segment_speed_plan import seven_segment_speed_plan
 import csv
 
 
@@ -10,7 +10,7 @@ class MOVEJ():
     def __init__(self, LCMHandler):
 
         # lcm
-        self.lcm_handler = LCMHandler()
+        self.lcm_handler = LCMHandler
 
 
         # MOVEJ变量

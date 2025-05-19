@@ -1,11 +1,11 @@
-from ..lcm_handler import LCMHandler
+from lcm_handler import LCMHandler
 import numpy as np
 import time
-from seven_segment_speed_plan import seven_segment_speed_plan
+from trajectory_plan.seven_segment_speed_plan import seven_segment_speed_plan
 from copy import deepcopy
 import quaternion  # 这将 numpy 的 ndarray 类型扩展以支持四元数
 import pinocchio as pin
-from ..robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
+from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
 import csv
 import math
 
@@ -13,7 +13,7 @@ import math
 class MOVEC():
     def __init__(self, LCMHandler):
         # lcm
-        self.lcm_handler = LCMHandler()
+        self.lcm_handler = LCMHandler
 
         # MOVEC 变量
         self.movec_plan_current_joint_position = None
@@ -77,6 +77,21 @@ class MOVEC():
         self.movec_plan_speed_max = 0.2 
 
         self.Kinematic_Model = Kinematic_Model()
+        self.MIN_VAL = 0.0000001  
+        self.interpolation_period = 2
+        self.interpolation_result = None
+        self.whether_save_movec_position = 0
+
+
+        self.interpolation_result_cart = pin.SE3.Identity()
+        self.interpolation_result_cart_position = None
+        self.interpolation_result_cart_pose = None
+        self.interpolation_result_cart_quat = None
+
+        self.right_arm_interpolation_result_cart = pin.SE3.Identity()
+        self.right_arm_interpolation_result_cart_position = None
+        self.right_arm_interpolation_result_cart_pose = None
+        self.right_arm_interpolation_result_cart_quat = None
 
 
 
@@ -87,24 +102,27 @@ class MOVEC():
         self.movec_plan_current_cart_position = self.movec_plan_current_cart.translation
         self.movec_plan_current_cart_pose = self.movec_plan_current_cart.rotation
         self.movec_plan_current_cart_quat = quaternion.from_rotation_matrix(self.movec_plan_current_cart_pose)
-        # print("self.movec_plan_current_cart_position  = {} ".format(self.movec_plan_current_cart_position))
-        # print("self.movec_plan_current_cart_pose  = {} ".format(self.movec_plan_current_cart_pose))
+        if self.whether_save_movec_position:
+            print("self.movec_plan_current_cart_position  = {} ".format(self.movec_plan_current_cart_position))
+            print("self.movec_plan_current_cart_pose  = {} ".format(self.movec_plan_current_cart_pose))
 
         # 获取左臂中间点位置对应的末端笛卡尔位置姿态和四元数
         self.movec_plan_middle_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_middle_joint_position[:7]))
         self.movec_plan_middle_cart_position = self.movec_plan_middle_cart.translation
         self.movec_plan_middle_cart_pose = self.movec_plan_middle_cart.rotation
         self.movec_plan_middle_cart_quat = quaternion.from_rotation_matrix(self.movec_plan_middle_cart_pose)
-        # print("self.movec_plan_middle_cart_position  = {} ".format(self.movec_plan_middle_cart_position))
-        # print("self.movec_plan_middle_cart_pose  = {} ".format(self.movec_plan_middle_cart_pose))        
+        if self.whether_save_movec_position:
+            print("self.movec_plan_middle_cart_position  = {} ".format(self.movec_plan_middle_cart_position))
+            print("self.movec_plan_middle_cart_pose  = {} ".format(self.movec_plan_middle_cart_pose))        
 
         # 获取左臂期望位置对应的末端笛卡尔位置姿态和四元数
         self.movec_plan_target_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_target_joint_position[:7]))
         self.movec_plan_target_cart_position = self.movec_plan_target_cart.translation
         self.movec_plan_target_cart_pose = self.movec_plan_target_cart.rotation
         self.movec_plan_target_cart_quat = quaternion.from_rotation_matrix(self.movec_plan_target_cart_pose)
-        # print("self.movec_plan_target_cart_position  = {} ".format(self.movec_plan_target_cart_position))
-        # print("self.movec_plan_target_cart_pose  = {} ".format(self.movec_plan_target_cart_pose))
+        if self.whether_save_movec_position:
+            print("self.movec_plan_target_cart_position  = {} ".format(self.movec_plan_target_cart_position))
+            print("self.movec_plan_target_cart_pose  = {} ".format(self.movec_plan_target_cart_pose))
 
 
         if(np.array_equal(self.movec_plan_current_cart_position, self.movec_plan_middle_cart_position) or np.array_equal(self.movec_plan_middle_cart_position, self.movec_plan_target_cart_position) or np.array_equal(self.movec_plan_current_cart_position, self.movec_plan_target_cart_position)):
@@ -187,24 +205,27 @@ class MOVEC():
         self.right_arm_movec_plan_current_cart_position = self.right_arm_movec_plan_current_cart.translation
         self.right_arm_movec_plan_current_cart_pose = self.right_arm_movec_plan_current_cart.rotation
         self.right_arm_movec_plan_current_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movec_plan_current_cart_pose)
-        # print("self.right_arm_movec_plan_current_cart_position  = {} ".format(self.right_arm_movec_plan_current_cart_position))
-        # print("self.right_arm_movec_plan_current_cart_pose  = {} ".format(self.right_arm_movec_plan_current_cart_pose))
+        if self.whether_save_movec_position:
+            print("self.right_arm_movec_plan_current_cart_position  = {} ".format(self.right_arm_movec_plan_current_cart_position))
+            print("self.right_arm_movec_plan_current_cart_pose  = {} ".format(self.right_arm_movec_plan_current_cart_pose))
 
         # 获取右臂中间点位置对应的末端笛卡尔位置姿态和四元数
         self.right_arm_movec_plan_middle_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.movec_plan_middle_joint_position[7:14]))
         self.right_arm_movec_plan_middle_cart_position = self.right_arm_movec_plan_middle_cart.translation
         self.right_arm_movec_plan_middle_cart_pose = self.right_arm_movec_plan_middle_cart.rotation
         self.right_arm_movec_plan_middle_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movec_plan_middle_cart_pose)
-        # print("self.right_arm_movec_plan_middle_cart_position  = {} ".format(self.right_arm_movec_plan_middle_cart_position))
-        # print("self.right_arm_movec_plan_middle_cart_pose  = {} ".format(self.right_arm_movec_plan_middle_cart_pose))        
+        if self.whether_save_movec_position:
+            print("self.right_arm_movec_plan_middle_cart_position  = {} ".format(self.right_arm_movec_plan_middle_cart_position))
+            print("self.right_arm_movec_plan_middle_cart_pose  = {} ".format(self.right_arm_movec_plan_middle_cart_pose))        
 
         # 获取右臂期望位置对应的末端笛卡尔位置姿态和四元数
         self.right_arm_movec_plan_target_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.movec_plan_target_joint_position[7:14]))
         self.right_arm_movec_plan_target_cart_position = self.right_arm_movec_plan_target_cart.translation
         self.right_arm_movec_plan_target_cart_pose = self.right_arm_movec_plan_target_cart.rotation
         self.right_arm_movec_plan_target_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movec_plan_target_cart_pose)
-        # print("self.right_arm_movec_plan_target_cart_position  = {} ".format(self.right_arm_movec_plan_target_cart_position))
-        # print("self.right_arm_movec_plan_target_cart_pose  = {} ".format(self.right_arm_movec_plan_target_cart_pose))        
+        if self.whether_save_movec_position:
+            print("self.right_arm_movec_plan_target_cart_position  = {} ".format(self.right_arm_movec_plan_target_cart_position))
+            print("self.right_arm_movec_plan_target_cart_pose  = {} ".format(self.right_arm_movec_plan_target_cart_pose))        
 
         # 三点位置校验  如何实现单臂中一个运行 一个不运动 这个地方的校验会直接退出 无法实现一个动 一个不动
         if(np.array_equal(self.right_arm_movec_plan_current_cart_position, self.right_arm_movec_plan_middle_cart_position) or np.array_equal(self.right_arm_movec_plan_middle_cart_position, self.right_arm_movec_plan_target_cart_position) or np.array_equal(self.right_arm_movec_plan_current_cart_position, self.right_arm_movec_plan_target_cart_position)):
@@ -317,7 +338,6 @@ class MOVEC():
 
 
     def movec_speed_plan_interpolation(self):
-        count = 0
         for interpolation_time in np.arange(0, self.speed_plan.time_length, self.interpolation_period / 1000):
             start_time = time.time()  # 记录循环开始的时间
             if 0 <= interpolation_time <= self.speed_plan.accacc_time:
@@ -367,7 +387,37 @@ class MOVEC():
                 self.interpolation_result[7:14] = self.Kinematic_Model.right_arm_interpolation_result
                 self.interpolation_result[:7] = self.Kinematic_Model.left_arm_interpolation_result
 
+            if self.whether_save_movec_position:
+                self.interpolation_result_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.interpolation_result[:7]))
+                self.interpolation_result_cart_position = self.interpolation_result_cart.translation
+                self.interpolation_result_cart_pose = self.interpolation_result_cart.rotation
+                self.interpolation_result_cart_quat = quaternion.from_rotation_matrix(self.interpolation_result_cart_pose)
 
+                with open("movec_interpolate_trajectory.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.interpolation_result)
+
+                with open("movec_left_arm_interpolation_result_cart_position.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.interpolation_result_cart_position)
+
+                with open("movec_left_arm_interpolation_result_cart_pose.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.interpolation_result_cart_pose)
+
+                self.right_arm_interpolation_result_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.interpolation_result[7:14]))
+                self.right_arm_interpolation_result_cart_position = self.right_arm_interpolation_result_cart.translation
+                self.right_arm_interpolation_result_cart_pose = self.right_arm_interpolation_result_cart.rotation
+                self.right_arm_interpolation_result_cart_quat = quaternion.from_rotation_matrix(self.right_arm_interpolation_result_cart_pose)
+
+
+                with open("movec_right_arm_interpolation_result_cart_position.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.right_arm_interpolation_result_cart_position)
+
+                with open("movec_right_arm_interpolation_result_cart_pose.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.right_arm_interpolation_result_cart_pose)
 
             self.lcm_handler.upper_body_data_publisher(self.interpolation_result)            
             self.movec_plan_current_joint_position = self.interpolation_result
@@ -380,8 +430,7 @@ class MOVEC():
         print("运行结束，到达目标点位！！！")
 
     def moveC2target(self, current_position, middle_position, target_position):
-        
-        self.cal_movec_plan_data(self, current_position, middle_position, target_position)
+        self.cal_movec_plan_data(current_position, middle_position, target_position)
         self.speed_plan = seven_segment_speed_plan(self.movec_plan_jerk_max, self.movec_plan_acc_max, self.movec_plan_speed_max, max(self.right_arm_movec_plan_displacement, self.movec_plan_displacement))
         self.movec_speed_plan_interpolation()
 
