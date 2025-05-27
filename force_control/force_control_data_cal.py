@@ -9,6 +9,8 @@ from trajectory_plan.moveJ import MOVEJ
 import threading
 import math
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
 
 
 class Force_Control_Data_Cal():
