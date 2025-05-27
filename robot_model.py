@@ -6,6 +6,7 @@ from lcm_handler import LCMHandler
 from trajectory_plan.moveJ import MOVEJ
 from trajectory_plan.moveL import MOVEL
 from trajectory_plan.moveC import MOVEC
+from force_control.force_control_data_cal import Force_Control_Data_Cal
 
 from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
 
@@ -24,7 +25,12 @@ class robot_model():
         self.MOVEL = MOVEL(self.lcm_handler)
         self.MOVEJ = MOVEJ(self.lcm_handler)
         self.MOVEC = MOVEC(self.lcm_handler)
+
+        ## 正逆运动学
         self.Kinematic_Model = Kinematic_Model()
+
+        ## 力控
+        self.Force_Control_Data_Cal = Force_Control_Data_Cal(self.lcm_handler)
 
 
     # 执行该函数之前需要先对movej_plan_target_position_list赋值
