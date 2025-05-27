@@ -6,26 +6,14 @@ import lcm
 import threading
 import numpy as np
 import time
+from os.path import dirname, join, abspath
 
 import pinocchio
-import os
 
 from copy import deepcopy
 
 class LCMHandler:
     def __init__(self):
-        """
-        初始化 LCM 处理类
-        """
-
-        current_folder = os.getcwd()
-        urdf_path = os.path.join(current_folder, "models/p5_humanoid_v1.0.urdf")
-
-        # 加载机器人模型和数据
-        self.model = pinocchio.buildModelFromUrdf(urdf_path)
-        self.data = self.model.createData()
-
-
         # 关节空间下的位置和速度以及upper_body_data包中的数据
         self.dim = 30
         self.joint_current_pos =  np.zeros(30)
@@ -80,56 +68,6 @@ class LCMHandler:
                                     + self.default_waist_control_mode \
                                     + self.default_head_control_mode
 
-
-
-
-        # 力传感器数据滤波缓存区
-        self.left_arm_FT_original_buff_size = 20
-        self.left_arm_FT_original_buff = [[0] * 6 for _ in range(self.left_arm_FT_original_buff_size)]
-        self.right_arm_FT_original_buff_size = 20
-        self.right_arm_FT_original_buff = [[0] * 6 for _ in range(self.right_arm_FT_original_buff_size)]
-
-        # 力传感器数据滤波后的结果
-        self.left_arm_FT_original_MAF = [0.0 for i in range(6)]
-        self.right_arm_FT_original_MAF = [0.0 for i in range(6)]
-
-        # 力传感器数据滤波补偿后的结果
-        self.left_arm_FT_original_MAF_compensation = [0.0 for i in range(6)]
-        self.right_arm_FT_original_MAF_compensation = [0.0 for i in range(6)]
-
-        self.left_arm_FT_original_MAF_compensation_2 = [0.0 for i in range(6)]
-        self.right_arm_FT_original_MAF_compensation_2 = [0.0 for i in range(6)]
-
-        # 力传感器数据滤波补偿后转换到基坐标系下的结果
-        self.left_arm_FT_original_MAF_compensation_base_coordinate_system = np.array([0.0 for i in range(6)])
-        self.right_arm_FT_original_MAF_compensation_base_coordinate_system = np.array([0.0 for i in range(6)])
-
-        self.left_arm_FT_original_MAF_compensation_base_coordinate_system_pre = np.array([0.0 for i in range(6)])
-        self.right_arm_FT_original_MAF_compensation_base_coordinate_system_pre = np.array([0.0 for i in range(6)])
-
-
-        self.left_arm_FT_original_MAF_compensation_base_coordinate_system_2 = np.array([0.0 for i in range(6)])
-
-        self.left_arm_FT_original_MAF_compensation_base_coordinate_system_pre_2 = np.array([0.0 for i in range(6)])
-
-        ## 传感器标定结果 在更换工装 或者传感器数据不准时 执行FT_data_calibration 把打印的结果替换掉下面的变量
-        self.left_arm_force_sensor_U =  -0.022038554065862543
-        self.left_arm_force_sensor_V =  -0.035732404863668174
-        self.left_arm_force_sensor_G =  4.7192077497213445
-        self.left_arm_force_sensor_data_L =  [-0.16855181901619956, 0.10399609621622885, -4.715050040170105]
-        self.left_arm_force_sensor_com =  [0.013996203651423768, -0.029254033370361296, -0.035436677023890806]
-        self.left_arm_force_sensor_data_Foffset =  [2.422074974285764, 1.499556791513176, 3.157712468951261]
-        self.left_arm_force_sensor_data_Moffset =  [-0.03964647477199035, -0.13257402858512296, 0.0999744133336088]
-        self.left_arm_force_sensor_mass =  0.4815518111960555
-        self.right_arm_force_sensor_U =  0.03643448677285478
-        self.right_arm_force_sensor_V =  0.05056155958140244
-        self.right_arm_force_sensor_G =  5.005101416226769
-        self.right_arm_force_sensor_data_L =  [0.25279004268375993, -0.18231795810623852, -4.99538762692017]
-        self.right_arm_force_sensor_com =  [0.030336498158045743, 0.02022538912470985, -0.03984968846092607]
-        self.right_arm_force_sensor_data_Foffset =  [2.169360130867161, -2.9570789370786414, 3.3885130740743916]
-        self.right_arm_force_sensor_data_Moffset =  [-0.0659167054079941, -0.1656463910222986, -0.13287034834905143]
-        self.right_arm_force_sensor_mass =  0.510724634308854
-
         # 线程启动
         self.lcm_thread_handle = threading.Thread(target=self.lcm_handle, daemon=True)
         self.lcm_thread_handle.start()
@@ -179,9 +117,6 @@ class LCMHandler:
                 msg.original_My, msg.original_Mx, msg.original_Mz
             ])
 
-        self.update_left_arm_FT_original_buff_and_data_filtering()
-            
-
     def FT_right_data_listener(self, channel, data):
         """
         监听右臂力传感器数据
@@ -202,10 +137,6 @@ class LCMHandler:
             # 坐标转换（确保方向一致）
             self.right_arm_FT_original = np.array([-ft_data[0], -ft_data[1], ft_data[2],
                                                    -ft_data[3], -ft_data[4], ft_data[5]])
-
-        self.update_right_arm_FT_original_buff_and_data_filtering()
-
-
 
     def upper_body_data_publisher(self, package):
         """
@@ -235,149 +166,3 @@ class LCMHandler:
         self.plan_pre_speed = np.copy(speed)
         self.plan_pre_acc = np.copy(acc)
         self.lcm.publish('upper_body_cmd', arm_and_hand_ctrl_msg.encode())
-
-
-
-
-    def update_left_arm_FT_original_buff_and_data_filtering(self):
-        # 插入新的数据
-        self.left_arm_FT_original_buff[1:self.left_arm_FT_original_buff_size - 1] = self.left_arm_FT_original_buff[0:self.left_arm_FT_original_buff_size - 2]
-        if isinstance(self.left_arm_FT_original, np.ndarray):
-            self.left_arm_FT_original_buff[0] = self.left_arm_FT_original.flatten().tolist()
-        else:
-            self.left_arm_FT_original_buff[0] = self.left_arm_FT_original
-
-        # 均值滤波器
-        self.left_arm_FT_original_MAF = self.left_arm_FT_data_moving_average_filter(self.left_arm_FT_original_buff)
-
-        # 传感器数据标定后补偿
-        if (self.left_arm_force_sensor_mass != 0):
-            self.left_arm_FT_data_compensation()
-            self.cal_left_arm_FT_original_MAF_compensation_base_coordinate_system()
-
-    def left_arm_FT_data_moving_average_filter(self, data):
-
-        data = np.array(data)
-        num_columns = data.shape[1]
-        filtered_data = np.zeros(num_columns)
-        
-        for i in range(num_columns):
-            filtered_data[i] = np.sum(data[:, i]) / self.left_arm_FT_original_buff_size
-        
-        filtered_data_list = filtered_data.tolist()
-        return filtered_data_list
-
-    def left_arm_FT_data_compensation(self):
-        if (self.left_arm_force_sensor_G == 0):
-            print("请先进行传感器数据的标定！！！")
-        else:
-            # 基于六维力传感器的工业机器人末端负载受力感知研究 -- 张立建
-            qpos_ros = self.qpos_lcm2ros(self.joint_current_pos)
-            pinocchio.forwardKinematics(self.model, self.data, qpos_ros)
-            # 关节角度更新后更新各个坐标系的位置
-            pinocchio.updateFramePlacements(self.model, self.data)    
-            # 基坐标系下末端力传感器姿态矩阵的转置矩阵 
-            end_frame_ID_left = self.model.getFrameId("link_FT_l")
-            R = self.data.oMf[end_frame_ID_left].rotation.T   
-            G = R @ self.left_arm_force_sensor_data_L
-
-            self.left_arm_FT_original_MAF_compensation[0] =  self.left_arm_FT_original_MAF[0] - self.left_arm_force_sensor_data_Foffset[0] - G[0]
-            self.left_arm_FT_original_MAF_compensation[1] =  self.left_arm_FT_original_MAF[1] - self.left_arm_force_sensor_data_Foffset[1] - G[1]
-            self.left_arm_FT_original_MAF_compensation[2] =  self.left_arm_FT_original_MAF[2] - self.left_arm_force_sensor_data_Foffset[2] - G[2]
-
-            self.left_arm_FT_original_MAF_compensation[3] =  self.left_arm_FT_original_MAF[3] - self.left_arm_force_sensor_data_Moffset[0] - (G[2] * self.left_arm_force_sensor_com[1] - G[1] * self.left_arm_force_sensor_com[2])
-            self.left_arm_FT_original_MAF_compensation[4] =  self.left_arm_FT_original_MAF[4] - self.left_arm_force_sensor_data_Moffset[1] - (G[0] * self.left_arm_force_sensor_com[2] - G[2] * self.left_arm_force_sensor_com[0])
-            self.left_arm_FT_original_MAF_compensation[5] =  self.left_arm_FT_original_MAF[5] - self.left_arm_force_sensor_data_Moffset[2] - (G[1] * self.left_arm_force_sensor_com[0] - G[0] * self.left_arm_force_sensor_com[1])
-
-  
-
-
-
-    def cal_left_arm_FT_original_MAF_compensation_base_coordinate_system(self):     # 将末端六维力传感器的数据从TCP坐标系转换到基坐标系下 现代机器人学
-        
-        qpos_ros = self.qpos_lcm2ros(self.joint_current_pos)
-
-        pinocchio.forwardKinematics(self.model, self.data, qpos_ros)
-
-        end_frame_ID_left = self.model.getFrameId("link_la7")
-
-        target_cart_pose = deepcopy(self.data.oMf[end_frame_ID_left].rotation)
-
-        base_in_effector_pose = target_cart_pose.T
-    
-    
-        base_in_effector_0r = np.hstack(((np.zeros((3, 3))), base_in_effector_pose))
-        base_in_effector_r0 = np.hstack((base_in_effector_pose, (np.zeros((3, 3)))))
-        base_in_effector_ad = np.vstack((base_in_effector_r0, base_in_effector_0r))
-        self.left_arm_FT_original_MAF_compensation_base_coordinate_system = base_in_effector_ad.T @ self.left_arm_FT_original_MAF_compensation
-        self.left_arm_FT_original_MAF_compensation_base_coordinate_system = 0.01 * self.left_arm_FT_original_MAF_compensation_base_coordinate_system + 0.99 * self.left_arm_FT_original_MAF_compensation_base_coordinate_system_pre
-        self.left_arm_FT_original_MAF_compensation_base_coordinate_system_pre = self.left_arm_FT_original_MAF_compensation_base_coordinate_system
-
-
-    def update_right_arm_FT_original_buff_and_data_filtering(self):
-        # 插入新的数据
-        self.right_arm_FT_original_buff[1:self.right_arm_FT_original_buff_size - 1] = self.right_arm_FT_original_buff[0:self.right_arm_FT_original_buff_size - 2]
-        if isinstance(self.right_arm_FT_original, np.ndarray):
-            self.right_arm_FT_original_buff[0] = self.right_arm_FT_original.flatten().tolist()
-        else:
-            self.right_arm_FT_original_buff[0] = self.right_arm_FT_original
-
-        # 均值滤波器
-        self.right_arm_FT_original_MAF = self.right_arm_FT_data_moving_average_filter(self.right_arm_FT_original_buff)
-        # 传感器数据标定后补偿
-        if (self.right_arm_force_sensor_mass != 0):
-            self.right_arm_FT_data_compensation()
-            self.cal_right_arm_FT_original_MAF_compensation_base_coordinate_system()
-
-    def right_arm_FT_data_moving_average_filter(self, data):
-        data = np.array(data)
-        num_columns = data.shape[1]
-        filtered_data = np.zeros(num_columns)
-        
-        for i in range(num_columns):
-            filtered_data[i] = np.sum(data[:, i]) / self.right_arm_FT_original_buff_size
-        
-        filtered_data_list = filtered_data.tolist()
-        return filtered_data_list
-
-    def right_arm_FT_data_compensation(self):
-        if (self.right_arm_force_sensor_G == 0):
-            print("请先进行传感器数据的标定！！！")
-        else:
-            # 基于六维力传感器的工业机器人末端负载受力感知研究 -- 张立建
-            qpos_ros = self.qpos_lcm2ros(self.joint_current_pos)
-            pinocchio.forwardKinematics(self.model, self.data, qpos_ros)
-            # 关节角度更新后更新各个坐标系的位置
-            pinocchio.updateFramePlacements(self.model, self.data)    
-            # 基坐标系下末端力传感器姿态矩阵的转置矩阵 
-
-            end_frame_ID_right = self.model.getFrameId("link_FT_r")
-            R = self.data.oMf[end_frame_ID_right].rotation.T   
-            G = R @ self.right_arm_force_sensor_data_L
-
-            self.right_arm_FT_original_MAF_compensation[0] =  self.right_arm_FT_original_MAF[0] - self.right_arm_force_sensor_data_Foffset[0] - G[0]
-            self.right_arm_FT_original_MAF_compensation[1] =  self.right_arm_FT_original_MAF[1] - self.right_arm_force_sensor_data_Foffset[1] - G[1]
-            self.right_arm_FT_original_MAF_compensation[2] =  self.right_arm_FT_original_MAF[2] - self.right_arm_force_sensor_data_Foffset[2] - G[2]
-
-            self.right_arm_FT_original_MAF_compensation[3] =  self.right_arm_FT_original_MAF[3] - self.right_arm_force_sensor_data_Moffset[0] - (G[2] * self.right_arm_force_sensor_com[1] - G[1] * self.right_arm_force_sensor_com[2])
-            self.right_arm_FT_original_MAF_compensation[4] =  self.right_arm_FT_original_MAF[4] - self.right_arm_force_sensor_data_Moffset[1] - (G[0] * self.right_arm_force_sensor_com[2] - G[2] * self.right_arm_force_sensor_com[0])
-            self.right_arm_FT_original_MAF_compensation[5] =  self.right_arm_FT_original_MAF[5] - self.right_arm_force_sensor_data_Moffset[2] - (G[1] * self.right_arm_force_sensor_com[0] - G[0] * self.right_arm_force_sensor_com[1])
-  
-
-
-    def cal_right_arm_FT_original_MAF_compensation_base_coordinate_system(self):     # 将末端六维力传感器的数据从TCP坐标系转换到基坐标系下 现代机器人学
-        qpos_ros = self.qpos_lcm2ros(self.joint_current_pos)
-        pinocchio.forwardKinematics(self.model, self.data, qpos_ros)
-
-        end_frame_ID_right = self.model.getFrameId("link_ra7")
-
-        target_cart_pose = deepcopy(self.data.oMf[end_frame_ID_right].rotation)
-
-        base_in_effector_pose = target_cart_pose.T
-        base_in_effector_0r = np.hstack(((np.zeros((3, 3))), base_in_effector_pose))
-        base_in_effector_r0 = np.hstack((base_in_effector_pose, (np.zeros((3, 3)))))
-        base_in_effector_ad = np.vstack((base_in_effector_r0, base_in_effector_0r))
-        self.right_arm_FT_original_MAF_compensation_base_coordinate_system = base_in_effector_ad.T @ self.right_arm_FT_original_MAF_compensation
-        self.right_arm_FT_original_MAF_compensation_base_coordinate_system = 0.01 * self.right_arm_FT_original_MAF_compensation_base_coordinate_system + 0.99 * self.right_arm_FT_original_MAF_compensation_base_coordinate_system_pre
-        self.right_arm_FT_original_MAF_compensation_base_coordinate_system_pre = self.right_arm_FT_original_MAF_compensation_base_coordinate_system
-
