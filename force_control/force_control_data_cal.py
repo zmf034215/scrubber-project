@@ -19,12 +19,6 @@ class Force_Control_Data_Cal():
         self.lcm_handler = LCMHandler
         self.Kinematic_Model = Kinematic_Model()
 
-        self.FT_data_cal_period = 0.002
-        self.FT_data_cal_threading_running = True
-        self.FT_data_cal_threading = threading.Thread(target = self.FT_data_cal)
-        self.FT_data_cal_threading.start()
-        self.FT_data_cal_threading_data_lock = threading.Lock()
-
         # 力传感器数据滤波缓存区
         self.left_arm_FT_original_buff_size = 20
         self.left_arm_FT_original_buff = [[0] * 6 for _ in range(self.left_arm_FT_original_buff_size)]
@@ -47,6 +41,10 @@ class Force_Control_Data_Cal():
         self.right_arm_FT_original_MAF_compensation_base_coordinate_system_pre = np.array([0.0 for i in range(6)])       
 
         self.MOVEJ = MOVEJ(self.lcm_handler)
+
+        # 传感器数据标定 相关参数设置
+        self.hand_home_pos = np.array([165, 176, 176, 176, 25.0, 165.0, 165, 176, 176, 176, 25.0, 165.0],dtype = np.float64)
+        self.hand_home_pos = list(self.hand_home_pos / 180 * np.pi)
         # 此处设置的点位需要包含6个 分别是重力依次位于传感器X轴正方向和负方向 Y轴正方向和负方向 Z轴的正方向和负方向
         self.FT_data_calibration_target_position = [
                                                 [0, 0.387,  1.186, -0.584, -1.19,  0,  0, 
@@ -73,22 +71,29 @@ class Force_Control_Data_Cal():
 
 
         ## 传感器标定结果 在更换工装 或者传感器数据不准时 执行FT_data_calibration 把打印的结果替换掉下面的变量
-        self.left_arm_force_sensor_U =  0.053465252625705534
-        self.left_arm_force_sensor_V =  -0.058756361960160444
-        self.left_arm_force_sensor_G =  4.342321498581525
-        self.left_arm_force_sensor_data_L =  [-0.2546278708093515, -0.23205272395221005, -4.32863398519172]
-        self.left_arm_force_sensor_com =  [0.01513366876889841, -0.032719384588941865, -0.03593523376728955]
-        self.left_arm_force_sensor_data_Foffset =  [0.7502256235251117, 2.1739114535655353, 3.0956966670826382]
-        self.left_arm_force_sensor_data_Moffset =  [-0.09327597872256821, -0.12539695198234915, 0.09769126960509712]
-        self.left_arm_force_sensor_mass =  0.44309403046750245
-        self.right_arm_force_sensor_U =  0.016163768371364313
-        self.right_arm_force_sensor_V =  0.08311768161548512
-        self.right_arm_force_sensor_G =  5.039869939594128
-        self.right_arm_force_sensor_data_L =  [0.41836547850800343, -0.08145974308795595, -5.021814776022044]
-        self.right_arm_force_sensor_com =  [0.030176020061039914, 0.019490926311244376, -0.04084543297776301]
-        self.right_arm_force_sensor_data_Foffset =  [1.358987887684965, -2.3391695935924055, 3.88399726201958]
-        self.right_arm_force_sensor_data_Moffset =  [0.0546933289020079, -0.20913171826644847, -0.03870068646849406]
-        self.right_arm_force_sensor_mass =  0.5142724428157274
+        self.left_arm_force_sensor_U =  -0.02520847572842786
+        self.left_arm_force_sensor_V =  0.0061004028007239286
+        self.left_arm_force_sensor_G =  5.018709722960107
+        self.left_arm_force_sensor_data_L =  [0.030606233748972866, 0.12650062341206175, -5.017021839105983]
+        self.left_arm_force_sensor_com =  [0.014006146218547467, -0.028262203871928137, -0.034169797159988975]
+        self.left_arm_force_sensor_data_Foffset =  [2.457025521441767, -0.8171799015181134, 4.231207938937983]
+        self.left_arm_force_sensor_data_Moffset =  [-0.1570760879740994, -0.14689808574880403, 0.06204645711093494]
+        self.left_arm_force_sensor_mass =  0.5121132370367456
+        self.right_arm_force_sensor_U =  0.032469835018497484
+        self.right_arm_force_sensor_V =  0.1353474432735703
+        self.right_arm_force_sensor_G =  5.201730668313453
+        self.right_arm_force_sensor_data_L =  [0.7015234012426759, -0.16886966002305437, -5.1514415362212285]
+        self.right_arm_force_sensor_com =  [0.030825296192456036, 0.018758116464767202, -0.04023412253732363]
+        self.right_arm_force_sensor_data_Foffset =  [1.9116834680396821, 0.0009225282535683388, 5.200083786482842]
+        self.right_arm_force_sensor_data_Moffset =  [0.10088740479936367, -0.24017727186411347, -0.03864363107316517]
+        self.right_arm_force_sensor_mass =  0.5307888437054543
+
+        ## 线程启动要在所有变量声明之后
+        self.FT_data_cal_period = 0.002
+        self.FT_data_cal_threading_data_lock = threading.Lock()
+        self.FT_data_cal_threading_running = True
+        self.FT_data_cal_threading = threading.Thread(target = self.FT_data_cal)
+        self.FT_data_cal_threading.start()
 
     def __del__(self):
         self.stop()  # 析构时自动停止线程
@@ -115,7 +120,7 @@ class Force_Control_Data_Cal():
         if (self.left_arm_force_sensor_G == 0):
             print("请先进行传感器数据的标定！！！")
         else:
-            R = (self.Kinematic_Model.left_arm_forward_kinematics).rotation.T
+            R = (self.Kinematic_Model.left_arm_forward_kinematics(self.lcm_handler.joint_current_pos[:7])).rotation.T
             G = R @ self.left_arm_force_sensor_data_L
 
             self.left_arm_FT_original_MAF_compensation[0] =  self.left_arm_FT_original_MAF[0] - self.left_arm_force_sensor_data_Foffset[0] - G[0]
@@ -127,7 +132,7 @@ class Force_Control_Data_Cal():
             self.left_arm_FT_original_MAF_compensation[5] =  self.left_arm_FT_original_MAF[5] - self.left_arm_force_sensor_data_Moffset[2] - (G[1] * self.left_arm_force_sensor_com[0] - G[0] * self.left_arm_force_sensor_com[1])
 
     def cal_left_arm_FT_original_MAF_compensation_base_coordinate_system(self):     # 将末端六维力传感器的数据从TCP坐标系转换到基坐标系下 现代机器人学
-        target_cart_pose = (self.Kinematic_Model.left_arm_forward_kinematics()).rotation
+        target_cart_pose = (self.Kinematic_Model.left_arm_forward_kinematics(self.lcm_handler.joint_current_pos[:7])).rotation
         base_in_effector_pose = target_cart_pose.T
         base_in_effector_0r = np.hstack(((np.zeros((3, 3))), base_in_effector_pose))
         base_in_effector_r0 = np.hstack((base_in_effector_pose, (np.zeros((3, 3)))))
@@ -137,9 +142,44 @@ class Force_Control_Data_Cal():
         self.left_arm_FT_original_MAF_compensation_base_coordinate_system_pre = self.left_arm_FT_original_MAF_compensation_base_coordinate_system
    
     def update_left_arm_FT_original_buff_and_date_filtering(self):
+        # 获取原始FT数据
+        raw_ft_data = self.lcm_handler.left_arm_FT_original
+        # 处理不同格式的数据
+        if isinstance(raw_ft_data, np.ndarray):
+            # 如果是二维数组 (6x1)，转换为1维数组
+            if raw_ft_data.ndim == 2 and raw_ft_data.shape[1] == 1:
+                processed_data = raw_ft_data.flatten().tolist()
+            # 如果是1维数组，直接使用
+            elif raw_ft_data.ndim == 1:
+                processed_data = raw_ft_data.tolist()
+            else:
+                print(f"警告: 不支持的数组形状 {raw_ft_data.shape}")
+                processed_data = [0.0] * 6
+        elif isinstance(raw_ft_data, list):
+            # 如果是列表的列表，展平为一维列表
+            if all(isinstance(item, list) for item in raw_ft_data):
+                processed_data = [item[0] if isinstance(item, list) and len(item) > 0 else 0.0 for item in raw_ft_data]
+            else:
+                processed_data = raw_ft_data
+        else:
+            print(f"错误: 不支持的数据类型 {type(raw_ft_data)}")
+            processed_data = [0.0] * 6
+        
+        # 确保数据长度为6
+        if len(processed_data) != 6:
+            print(f"错误: 处理后的FT数据长度应为6, 实际为: {len(processed_data)}")
+            processed_data = [0.0] * 6
+        
+        # 确保所有元素都是数字
+        for i, value in enumerate(processed_data):
+            if not isinstance(value, (int, float)):
+                print(f"错误: 处理后FT数据索引 {i} 不是数字: {type(value)}")
+                processed_data = [0.0] * 6
+                break
+
         # 插入新的数据
         self.left_arm_FT_original_buff[1:] = self.left_arm_FT_original_buff[:-1]
-        self.left_arm_FT_original_buff[0] = self.lcm_handler.left_arm_FT_original
+        self.left_arm_FT_original_buff[0] = processed_data
 
         # 均值滤波器
         self.left_arm_FT_original_MAF = self.left_arm_FT_data_moving_average_filter(self.left_arm_FT_original_buff)
@@ -167,7 +207,7 @@ class Force_Control_Data_Cal():
             print("请先进行传感器数据的标定！！！")
         else:
             # 基于六维力传感器的工业机器人末端负载受力感知研究 -- 张立建
-            R = (self.Kinematic_Model.right_arm_forward_kinematics).rotation.T  
+            R = (self.Kinematic_Model.right_arm_forward_kinematics(self.lcm_handler.joint_current_pos[7:14])).rotation.T  
             G = R @ self.right_arm_force_sensor_data_L
 
             self.right_arm_FT_original_MAF_compensation[0] =  self.right_arm_FT_original_MAF[0] - self.right_arm_force_sensor_data_Foffset[0] - G[0]
@@ -179,7 +219,7 @@ class Force_Control_Data_Cal():
             self.right_arm_FT_original_MAF_compensation[5] =  self.right_arm_FT_original_MAF[5] - self.right_arm_force_sensor_data_Moffset[2] - (G[1] * self.right_arm_force_sensor_com[0] - G[0] * self.right_arm_force_sensor_com[1])        
 
     def cal_right_arm_FT_original_MAF_compensation_base_coordinate_system(self):    # 将末端六维力传感器的数据从TCP坐标系转换到基坐标系下 现代机器人学
-        target_cart_pose = (self.Kinematic_Model.right_arm_forward_kinematics).rotation
+        target_cart_pose = (self.Kinematic_Model.right_arm_forward_kinematics(self.lcm_handler.joint_current_pos[7:14])).rotation
         base_in_effector_pose = target_cart_pose.T
         base_in_effector_0r = np.hstack(((np.zeros((3, 3))), base_in_effector_pose))
         base_in_effector_r0 = np.hstack((base_in_effector_pose, (np.zeros((3, 3)))))
@@ -190,9 +230,45 @@ class Force_Control_Data_Cal():
 
 
     def update_right_arm_FT_original_buff_and_date_filtering(self):
+
+        # 获取原始FT数据
+        raw_ft_data = self.lcm_handler.right_arm_FT_original
+        # 处理不同格式的数据
+        if isinstance(raw_ft_data, np.ndarray):
+            # 如果是二维数组 (6x1)，转换为1维数组
+            if raw_ft_data.ndim == 2 and raw_ft_data.shape[1] == 1:
+                processed_data = raw_ft_data.flatten().tolist()
+            # 如果是1维数组，直接使用
+            elif raw_ft_data.ndim == 1:
+                processed_data = raw_ft_data.tolist()
+            else:
+                print(f"警告: 不支持的数组形状 {raw_ft_data.shape}")
+                processed_data = [0.0] * 6
+        elif isinstance(raw_ft_data, list):
+            # 如果是列表的列表，展平为一维列表
+            if all(isinstance(item, list) for item in raw_ft_data):
+                processed_data = [item[0] if isinstance(item, list) and len(item) > 0 else 0.0 for item in raw_ft_data]
+            else:
+                processed_data = raw_ft_data
+        else:
+            print(f"错误: 不支持的数据类型 {type(raw_ft_data)}")
+            processed_data = [0.0] * 6
+        
+        # 确保数据长度为6
+        if len(processed_data) != 6:
+            print(f"错误: 处理后的FT数据长度应为6, 实际为: {len(processed_data)}")
+            processed_data = [0.0] * 6
+        
+        # 确保所有元素都是数字
+        for i, value in enumerate(processed_data):
+            if not isinstance(value, (int, float)):
+                print(f"错误: 处理后FT数据索引 {i} 不是数字: {type(value)}")
+                processed_data = [0.0] * 6
+                break
+
         # 插入新的数据
         self.right_arm_FT_original_buff[1:] = self.right_arm_FT_original_buff[:-1]
-        self.right_arm_FT_original_buff[0] = self.lcm_handler.right_arm_FT_original
+        self.right_arm_FT_original_buff[0] = processed_data
 
         # 均值滤波器
         self.right_arm_FT_original_MAF = self.right_arm_FT_data_moving_average_filter(self.right_arm_FT_original_buff)
@@ -221,7 +297,7 @@ class Force_Control_Data_Cal():
 
     def robot_movej_to_target_position_for_FT_data_calibration(self):
         if (self.trajectory_segment_index == 0):
-            current_position = self.joint_current_pos
+            current_position = self.lcm_handler.joint_current_pos
         else:
             current_position = self.FT_data_calibration_target_position[self.trajectory_segment_index - 1]
 
@@ -254,7 +330,8 @@ class Force_Control_Data_Cal():
             # 左臂处理
             Rmat_tmp = np.zeros((3, 6))
             fmat_tmp = np.zeros((3, 1))
-            R = (self.Kinematic_Model.left_arm_forward_kinematics).rotation.T
+
+            R = (self.Kinematic_Model.left_arm_forward_kinematics(self.lcm_handler.joint_current_pos[:7])).rotation.T
             Rmat_tmp = np.hstack((R, Imat))
             fmat_tmp[0] = self.left_arm_FT_original_MAF[0]
             fmat_tmp[1] = self.left_arm_FT_original_MAF[1]
@@ -296,7 +373,7 @@ class Force_Control_Data_Cal():
             # 右臂处理
             Rmat_tmp_right = np.zeros((3, 6))
             fmat_tmp_right = np.zeros((3, 1))
-            R = (self.Kinematic_Model.right_arm_forward_kinematics).rotation.T
+            R = (self.Kinematic_Model.right_arm_forward_kinematics(self.lcm_handler.joint_current_pos[7:14])).rotation.T
 
             Rmat_tmp_right = np.hstack((R, Imat))
             fmat_tmp_right[0] = self.right_arm_FT_original_MAF[0]
