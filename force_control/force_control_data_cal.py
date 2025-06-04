@@ -2,8 +2,6 @@ from lcm_handler import LCMHandler
 import numpy as np
 import time
 from copy import deepcopy
-import quaternion  # 这将 numpy 的 ndarray 类型扩展以支持四元数
-import pinocchio as pin
 from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
 from trajectory_plan.moveJ import MOVEJ
 import threading
@@ -501,5 +499,33 @@ class Force_Control_Data_Cal():
         plt.show()
 
 
+    def plot_right_arm_FT_original_MAF_compensation_base_coordinate_system(self):
+        # 初始化数据存储
+        data = np.zeros((6, 50))  # 存储最近50个数据点
+        fig, axs = plt.subplots(2, 3, figsize=(25, 15))  # 创建子图，每个方向一个
+        fig.suptitle('plot_right_arm_FT_original_MAF_compensation_base_coordinate_system', fontsize=16)
+        lines = []  # 存储各曲线线对象
+        title = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        for i in range(6):
+            ax = axs.flatten()[i]
+            ax.set_title(title[i])
+            ax.set_xlim(0, 50)
+            if i < 3:
+                ax.set_ylim(-100, 100)  # 假设力的量级在-100到100之间，可以根据实际情况调整
+            else:
+                ax.set_ylim(-5, 5)  # 假设力的量级在-100到100之间，可以根据实际情况调整
+            line, = ax.plot([], [], label=f"Direction {i+1}")
+            lines.append(line)
+        def update(frame):
+            new_data = self.right_arm_FT_original_MAF_compensation_base_coordinate_system # 获取新的传感器数据
+            data[:, :-1] = data[:, 1:]  # 数据左移
+            data[:, -1] = new_data  # 添加新数据
+            
+            for i in range(6):
+                lines[i].set_data(np.arange(50), data[i, :])  # 更新数据
+            return lines
+
+        ani = FuncAnimation(fig, update, frames = np.arange(50), blit=True, repeat=True)
+        plt.show()
 
 

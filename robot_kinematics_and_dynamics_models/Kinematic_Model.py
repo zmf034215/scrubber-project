@@ -34,12 +34,35 @@ class Kinematic_Model:
         left_arm_cart_pose = copy.deepcopy(self.left_arm_pin_data.oMi[self.left_arm_pin_model.njoints - 1])
         return left_arm_cart_pose
     
+    def left_arm_Jacobians(self, left_arm_joint_position):
+        pinocchio.forwardKinematics(self.left_arm_pin_model, self.left_arm_pin_data, left_arm_joint_position)
+        pinocchio.updateFramePlacements(self.left_arm_pin_model, self.left_arm_pin_data) 
+        pinocchio.computeJointJacobians(self.left_arm_pin_model, self.left_arm_pin_data) 
+
+        joint_id = self.left_arm_pin_model.njoints - 1
+        Jacobians = pinocchio.getJointJacobian(self.left_arm_pin_model, self.left_arm_pin_data, joint_id, pinocchio.LOCAL)
+
+        frame_id = self.left_arm_pin_model.getFrameId("FT_sensor")
+        Jacobians = pinocchio.getFrameJacobian(self.left_arm_pin_model, self.left_arm_pin_data, frame_id, pinocchio.LOCAL)
+        return Jacobians      
+
 
     def right_arm_forward_kinematics(self, right_arm_joint_position):
         pinocchio.forwardKinematics(self.right_arm_pin_model, self.right_arm_pin_data, right_arm_joint_position)
         right_arm_cart_pose = copy.deepcopy(self.right_arm_pin_data.oMi[self.right_arm_pin_model.njoints - 1])
         return right_arm_cart_pose
     
+    def right_arm_Jacobians(self, right_arm_joint_position):
+        pinocchio.forwardKinematics(self.right_arm_pin_model, self.right_arm_pin_data, right_arm_joint_position)
+        pinocchio.updateFramePlacements(self.right_arm_pin_model, self.right_arm_pin_data) 
+        pinocchio.computeJointJacobians(self.right_arm_pin_model, self.right_arm_pin_data)     
+
+        joint_id = self.right_arm_pin_model.njoints - 1
+        Jacobians = pinocchio.getJointJacobian(self.right_arm_pin_model, self.right_arm_pin_data, joint_id, pinocchio.LOCAL)
+
+        frame_id = self.right_arm_pin_model.getFrameId("FT_sensor")
+        Jacobians = pinocchio.getFrameJacobian(self.right_arm_pin_model, self.right_arm_pin_data, frame_id, pinocchio.LOCAL)
+        return Jacobians      
 
     def left_arm_inverse_kinematics(self, cart_interpolation_pose, cart_interpolation_position, current_joint_position):
         oMdes = pinocchio.SE3(np.array(cart_interpolation_pose), np.array(cart_interpolation_position))
