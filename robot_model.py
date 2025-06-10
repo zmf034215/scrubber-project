@@ -80,14 +80,3 @@ class robot_model():
             target_joint_position = self.movec_plan_target_position_list[1]
 
             self.MOVEC.moveC2target(current_joint_position, middle_joint_position, target_joint_position)
-
-    
-
-
-
-
-
-
-
-
-

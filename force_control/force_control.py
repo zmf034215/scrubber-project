@@ -37,6 +37,9 @@ class Force_Control():
         self.right_arm_effector_pre_position = np.array([0, 0, 0, 0, 0, 0])
         self.right_arm_effector_pre_acc = np.array([0, 0, 0, 0, 0, 0])
 
+        self.left_arm_joint_pre_speed = np.array([0, 0, 0, 0, 0, 0, 0])
+        self.right_arm_joint_pre_speed = np.array([0, 0, 0, 0, 0, 0, 0])
+
         # 是否需要使用逆解方案来实现拖动以及恒力跟踪标志位 0不使用 1使用
         self.force_sensor_drag_teach_whether_use_IK = True
         self.constant_force_tracking_control_whether_use_IK = True
@@ -62,12 +65,12 @@ class Force_Control():
         self.right_arm_admittance_control_M = np.array([0.1, 0.1, 0.1, 100, 100, 100])
         self.right_arm_admittance_control_B = np.array([0.05, 0.05, 0.05, 100, 100, 100])
 
-        self.left_arm_admittance_control_M_end_cartesian_space_plan = np.array([0.001, 0.001, 0.001, 10, 10, 10])
-        self.left_arm_admittance_control_B_end_cartesian_space_plan = np.array([0.15, 0.15, 0.15, 5, 5, 5])
+        self.left_arm_admittance_control_M_end_cartesian_space_plan = np.array([0.01, 0.01, 0.01, 10, 10, 10])
+        self.left_arm_admittance_control_B_end_cartesian_space_plan = np.array([0.1, 0.1, 0.1, 5, 5, 5])
 
 
-        self.right_arm_admittance_control_M_end_cartesian_space_plan = np.array([0.001, 0.001, 0.001, 10, 10, 10])
-        self.right_arm_admittance_control_B_end_cartesian_space_plan = np.array([0.15, 0.15, 0.15, 5, 5, 5])
+        self.right_arm_admittance_control_M_end_cartesian_space_plan = np.array([0.01, 0.01, 0.01, 10, 10, 10])
+        self.right_arm_admittance_control_B_end_cartesian_space_plan = np.array([0.1, 0.1, 0.1, 5, 5, 5])
 
         self.interpolation_period = 2
         self.joint_target_position = None
@@ -90,7 +93,7 @@ class Force_Control():
 
                 # 这个参数 需要进一步调节 直到拖动时感觉不出明显的卡顿为止
                 if (Ftmp > 1) or (Mtmp > 0.5):
-                    self.force_control_left_arm_current_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movel_plan_current_joint_position[:7]))
+                    self.force_control_left_arm_current_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.joint_target_position[:7]))
                     self.left_arm_target_cart_position = deepcopy(self.force_control_left_arm_current_cart.translation)
                     self.left_arm_target_cart_pose = deepcopy(self.force_control_left_arm_current_cart.rotation)                    
                     self.left_arm_effector_pre_position = self.left_arm_target_cart_position
@@ -149,7 +152,7 @@ class Force_Control():
                 # print("请注意进入拖动状态 Ftmp_right = {}".format(Ftmp_right))
 
                 if (Ftmp_right > 1) or (Mtmp_right > 0.5):
-                    self.force_control_right_arm_current_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movel_plan_current_joint_position[7:14]))
+                    self.force_control_right_arm_current_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.joint_target_position[7:14]))
                     self.right_arm_target_cart_position = deepcopy(self.force_control_right_arm_current_cart.translation)
                     self.right_arm_target_cart_pose = deepcopy(self.force_control_right_arm_current_cart.rotation)                    
                     self.right_arm_effector_pre_position = self.right_arm_target_cart_position
@@ -208,7 +211,7 @@ class Force_Control():
                 # print("请注意进入拖动状态 Mtmp = {}".format(Mtmp))                
 
                 # 这个参数 需要进一步调节 直到拖动时感觉不出明显的卡顿为止
-                if (Ftmp > 2) or (Mtmp > 1):
+                if (Ftmp > 3) or (Mtmp > 1.5):
                     # 直接使用外力 求末端各个方向对应的速度值 后雅可比矩阵映射到各个关节对应的速度 再速度积分求位置 self.FT_original_MAF_compensation是传感器坐标系下补偿后的力传感器数据 
                     # 导纳控制输出笛卡尔空间下的速度
                     self.left_arm_effector_current_acc = (self.force_control_data.left_arm_FT_original_MAF_compensation - self.left_arm_admittance_control_B @ self.left_arm_effector_pre_speed) / self.left_arm_admittance_control_M 
@@ -240,7 +243,7 @@ class Force_Control():
                 # print("请注意进入拖动状态 Ftmp_right = {}".format(Ftmp_right))
 
                 # 这个参数 需要进一步调节 直到拖动时感觉不出明显的卡顿为止
-                if (Ftmp_right > 2) or (Mtmp_right > 1):
+                if (Ftmp_right > 3) or (Mtmp_right > 1.5):
                     # 直接使用外力 求末端各个方向对应的速度值 后雅可比矩阵映射到各个关节对应的速度 再速度积分求位置 self.FT_original_MAF_compensation是传感器坐标系下补偿后的力传感器数据 
                     # 导纳控制输出笛卡尔空间下的速度
                     self.right_arm_effector_current_acc = (self.force_control_data.right_arm_FT_original_MAF_compensation - self.right_arm_admittance_control_B @ self.right_arm_effector_pre_speed) / self.right_arm_admittance_control_M 
