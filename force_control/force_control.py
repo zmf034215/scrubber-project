@@ -92,7 +92,7 @@ class Force_Control():
                 # print("请注意进入拖动状态 Mtmp = {}".format(Mtmp))
 
                 # 这个参数 需要进一步调节 直到拖动时感觉不出明显的卡顿为止
-                if (Ftmp > 1) or (Mtmp > 0.5):
+                if (Ftmp > 3) or (Mtmp > 1.5):
                     self.force_control_left_arm_current_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.joint_target_position[:7]))
                     self.left_arm_target_cart_position = deepcopy(self.force_control_left_arm_current_cart.translation)
                     self.left_arm_target_cart_pose = deepcopy(self.force_control_left_arm_current_cart.rotation)                    
@@ -151,7 +151,7 @@ class Force_Control():
                 # print("请注意进入拖动状态 Ftmp_right = {}".format(Ftmp_right))
                 # print("请注意进入拖动状态 Ftmp_right = {}".format(Ftmp_right))
 
-                if (Ftmp_right > 1) or (Mtmp_right > 0.5):
+                if (Ftmp_right > 3) or (Mtmp_right > 1.5):
                     self.force_control_right_arm_current_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.joint_target_position[7:14]))
                     self.right_arm_target_cart_position = deepcopy(self.force_control_right_arm_current_cart.translation)
                     self.right_arm_target_cart_pose = deepcopy(self.force_control_right_arm_current_cart.rotation)                    
