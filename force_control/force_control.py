@@ -77,7 +77,7 @@ class Force_Control():
 
 
 
-        # 锁轴拖动 方向标志位
+        # 锁轴拖动 方向标志位 纯笛卡尔/逆解的方案中有锁轴拖动功能
         self.left_arm_force_sensor_drag_teach_lock_axis_sign = np.array([1, 1, 1, 1, 1, 1])
         self.right_arm_force_sensor_drag_teach_lock_axis_sign = np.array([1, 1, 1, 1, 1, 1])
 
@@ -109,6 +109,8 @@ class Force_Control():
 
                     self.left_arm_effector_current_speed = (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc) * (self.interpolation_period / 1000)
                     self.left_arm_effector_current_speed = 0.5 * self.left_arm_effector_current_speed + 0.5 * self.left_arm_effector_pre_speed
+
+                    ## 纯笛卡尔/逆解的方案中有锁轴拖动功能
                     self.left_arm_effector_current_speed = self.left_arm_effector_current_speed * self.left_arm_force_sensor_drag_teach_lock_axis_sign
 
 
@@ -171,6 +173,8 @@ class Force_Control():
 
                     self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) * (self.interpolation_period / 1000)
                     self.right_arm_effector_current_speed = 0.5 * self.right_arm_effector_current_speed + 0.5 * self.right_arm_effector_pre_speed
+
+                    ## 纯笛卡尔/逆解的方案中有锁轴拖动功能
                     self.right_arm_effector_current_speed = self.right_arm_effector_current_speed * self.right_arm_force_sensor_drag_teach_lock_axis_sign
 
                     # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
@@ -224,7 +228,6 @@ class Force_Control():
                     # 导纳控制输出笛卡尔空间下的速度
                     self.left_arm_effector_current_acc = (self.force_control_data.left_arm_FT_original_MAF_compensation - self.left_arm_admittance_control_B @ self.left_arm_effector_pre_speed) / self.left_arm_admittance_control_M 
                     self.left_arm_effector_current_speed = (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc) / 2 * (self.interpolation_period / 1000)
-                    self.left_arm_effector_current_speed = self.left_arm_effector_current_speed * self.left_arm_force_sensor_drag_teach_lock_axis_sign
 
                     # 获取雅可比矩阵的函数接口 
                     Jacobians = self.Kinematic_Model.left_arm_Jacobians(self.joint_target_position[:7])
@@ -256,7 +259,6 @@ class Force_Control():
                     # 导纳控制输出笛卡尔空间下的速度
                     self.right_arm_effector_current_acc = (self.force_control_data.right_arm_FT_original_MAF_compensation - self.right_arm_admittance_control_B @ self.right_arm_effector_pre_speed) / self.right_arm_admittance_control_M 
                     self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) / 2 * (self.interpolation_period / 1000)
-                    self.right_arm_effector_current_speed = self.right_arm_effector_current_speed * self.right_arm_force_sensor_drag_teach_lock_axis_sign
 
                     # 获取雅可比矩阵的函数接口 
                     Jacobians = self.Kinematic_Model.right_arm_Jacobians(self.joint_target_position[7:14])

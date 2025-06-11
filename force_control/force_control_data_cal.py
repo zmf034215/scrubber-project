@@ -69,22 +69,22 @@ class Force_Control_Data_Cal():
 
 
         ## 传感器标定结果 在更换工装 或者传感器数据不准时 执行FT_data_calibration 把打印的结果替换掉下面的变量
-        self.left_arm_force_sensor_U =  0.03456741086040786
-        self.left_arm_force_sensor_V =  -0.004554755573634274
-        self.left_arm_force_sensor_G =  4.809492787234467
-        self.left_arm_force_sensor_data_L =  [-0.021892901841845447, -0.1662186059925758, -4.806569769214963]
-        self.left_arm_force_sensor_com =  [0.015049521565301205, -0.03027642807848622, -0.03561914086662669]
-        self.left_arm_force_sensor_data_Foffset =  [1.9513999600672522, 3.881506630150031, 1.6523883881409658]
-        self.left_arm_force_sensor_data_Moffset =  [0.09472267465828017, -0.08248921912478148, 0.11596259603777183]
-        self.left_arm_force_sensor_mass =  0.49076457012596597
-        self.right_arm_force_sensor_U =  0.014241065011194334
-        self.right_arm_force_sensor_V =  0.14471838336977638
-        self.right_arm_force_sensor_G =  5.242658511850392
-        self.right_arm_force_sensor_data_L =  [0.7559868438223611, -0.07465851708245774, -5.187328625571347]
-        self.right_arm_force_sensor_com =  [0.030519982587094673, 0.019936948134367184, -0.040478422356555896]
-        self.right_arm_force_sensor_data_Foffset =  [2.347505407382107, -4.532639258255506, 2.949232293626511]
-        self.right_arm_force_sensor_data_Moffset =  [-0.09126276704855094, -0.16469969233871554, -0.15567064868506444]
-        self.right_arm_force_sensor_mass =  0.5349651542704481
+        self.left_arm_force_sensor_U =  -0.02711089772276457
+        self.left_arm_force_sensor_V =  0.00622396433616731
+        self.left_arm_force_sensor_G =  4.6994273280758065
+        self.left_arm_force_sensor_data_L =  [0.02923813093418845, 0.12739008700664822, -4.6976094036539084]
+        self.left_arm_force_sensor_com =  [0.015781427487178142, -0.03175454658969164, -0.035973226752721646]
+        self.left_arm_force_sensor_data_Foffset =  [4.088703281190303, 0.9225818061223352, 2.7751505095902904]
+        self.left_arm_force_sensor_data_Moffset =  [-0.041655782813106425, -0.17277671974888037, 0.1303492928027965]
+        self.left_arm_force_sensor_mass =  0.4795334008240619
+        self.right_arm_force_sensor_U =  0.0030429214873178632
+        self.right_arm_force_sensor_V =  0.14351715379981822
+        self.right_arm_force_sensor_G =  5.224240754738363
+        self.right_arm_force_sensor_data_L =  [0.7471935031858468, -0.015896929914892777, -5.170506804935606]
+        self.right_arm_force_sensor_com =  [0.03011515711848877, 0.019900252131784923, -0.040752710228813986]
+        self.right_arm_force_sensor_data_Foffset =  [2.1631329457852253, -4.409957200140173, 1.0303845553851303]
+        self.right_arm_force_sensor_data_Moffset =  [-0.16821708507228322, -0.08693602675654791, -0.18326550815454654]
+        self.right_arm_force_sensor_mass =  0.5330857912998329
 
         ## 线程启动要在所有变量声明之后
         self.FT_data_cal_period = 0.002
