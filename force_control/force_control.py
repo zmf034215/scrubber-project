@@ -42,7 +42,6 @@ class Force_Control():
 
         # 是否需要使用逆解方案来实现拖动以及恒力跟踪标志位 0不使用 1使用
         self.force_sensor_drag_teach_whether_use_IK = True
-        self.constant_force_tracking_control_whether_use_IK = True
 
         # 是否存储拖动/恒力跟踪产生的期望位置曲线标志位 0 不保存 1 保存
         self.whether_save_drag_position = False
@@ -52,25 +51,30 @@ class Force_Control():
         self.left_arm_target_FT_data = np.array([0, 0, 15, 0, 0, 0])
         self.right_arm_target_FT_data = np.array([0, 0, 15, 0, 0, 0])
 
-        # 导纳控制实现恒力跟踪的系数设置   这个地方由于代码写的有问题 需要重新调节这个参数 可以先调节单臂的参数 然后 按照单臂的参数写 
-        self.left_arm_constant_force_M = np.array([5, 5, 5, 5, 5, 5])
-        self.left_arm_constant_force_B = np.array([500, 500, 500, 500, 500, 500])
-        self.right_arm_constant_force_M = np.array([5, 5, 5, 5, 5, 5])
-        self.right_arm_constant_force_B = np.array([500, 500, 500, 500, 500, 500])
 
-        # 导纳控制实现拖动示教的系数设置   这个地方由于代码写的有问题 需要重新调节这个参数 可以先调节单臂的参数 然后 按照单臂的参数写 
+        ## 导纳控制实现拖动示教的系数设置 
+        # 雅可比方案的导纳控制参数设置  
         self.left_arm_admittance_control_M = np.array([0.1, 0.1, 0.1, 100, 100, 100])
         self.left_arm_admittance_control_B = np.array([0.05, 0.05, 0.05, 100, 100, 100])
 
         self.right_arm_admittance_control_M = np.array([0.1, 0.1, 0.1, 100, 100, 100])
         self.right_arm_admittance_control_B = np.array([0.05, 0.05, 0.05, 100, 100, 100])
 
+        # 逆解方案的导纳控制参数设置
         self.left_arm_admittance_control_M_end_cartesian_space_plan = np.array([0.01, 0.01, 0.01, 10, 10, 10])
         self.left_arm_admittance_control_B_end_cartesian_space_plan = np.array([0.1, 0.1, 0.1, 5, 5, 5])
 
-
         self.right_arm_admittance_control_M_end_cartesian_space_plan = np.array([0.01, 0.01, 0.01, 10, 10, 10])
         self.right_arm_admittance_control_B_end_cartesian_space_plan = np.array([0.1, 0.1, 0.1, 5, 5, 5])
+
+
+        ## 导纳控制实现恒力跟踪的参数设置
+        # 逆解方案的导纳控制参数设置
+        self.left_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control = np.array([0.1, 0.1, 0.1, 10, 10, 10])
+        self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 0.5, 5, 5, 5])
+
+        self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control = np.array([0.1, 0.1, 0.1, 10, 10, 10])
+        self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 0.5, 5, 5, 5])
 
         self.interpolation_period = 2
         self.joint_target_position = None
@@ -287,5 +291,165 @@ class Force_Control():
             elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
             delay = max(0, self.interpolation_period / 1000 - elapsed_time)  # 2毫秒减去已经过的时间
             time.sleep(delay)  # 延迟剩余的时间
+
+
+    def constant_force_tracking_control(self):
+        self.joint_target_position = self.lcm_handler.joint_current_pos
+        self.last_joint_target_position = self.joint_target_position
+
+        # 期望力不为0的方向 产生对应的速度值 期望力为0 不产生
+        left_arm_target_FT_data_index = np.zeros_like(self.left_arm_target_FT_data)
+        left_arm_target_FT_data_index = np.where(self.left_arm_target_FT_data != 0, 1, 0)
+
+
+        # 期望力不为0的方向 产生对应的速度值 期望力为0 不产生
+        right_arm_target_FT_data_index = np.zeros_like(self.right_arm_target_FT_data)
+        right_arm_target_FT_data_index = np.where(self.right_arm_target_FT_data != 0, 1, 0)
+
+
+
+        while(1):
+            start_time = time.time()  # 记录循环开始的时间
+
+            self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system = self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system * left_arm_target_FT_data_index
+            FT_data_err = self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system - self.left_arm_target_FT_data
+            Ftmp = math.sqrt(FT_data_err[0] ** 2 + FT_data_err[1] ** 2 + FT_data_err[2] ** 2) 
+            Mtmp = math.sqrt(FT_data_err[3] ** 2 + FT_data_err[4] ** 2 + FT_data_err[5] ** 2)
+            # print("请注意进入拖动状态 Ftmp = {}".format(Ftmp))
+            # print("请注意进入拖动状态 Mtmp = {}".format(Mtmp))
+
+            if (Ftmp > 0.1) or (Mtmp > 0.02):
+                # 正运动学 计算末端位置以及姿态 
+                self.force_control_left_arm_current_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.joint_target_position[:7]))
+                self.left_arm_target_cart_position = deepcopy(self.force_control_left_arm_current_cart.translation)
+                self.left_arm_target_cart_pose = deepcopy(self.force_control_left_arm_current_cart.rotation)                    
+                self.left_arm_effector_pre_position = self.left_arm_target_cart_position
+
+                # 导纳控制输出笛卡尔空间下的速度
+                self.left_arm_effector_current_acc = (FT_data_err - self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control @ self.left_arm_effector_pre_speed) / self.left_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control
+                self.left_arm_effector_current_acc = 0.5 * self.left_arm_effector_current_acc + 0.5 * self.left_arm_effector_pre_acc
+
+                self.left_arm_effector_current_speed = (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc) * (self.interpolation_period / 1000)
+                self.left_arm_effector_current_speed = 0.5 * self.left_arm_effector_current_speed + 0.5 * self.left_arm_effector_pre_speed
+
+                ## 纯笛卡尔/逆解的方案中有锁轴拖动功能
+                self.left_arm_effector_current_speed = self.left_arm_effector_current_speed * self.left_arm_force_sensor_drag_teach_lock_axis_sign
+
+
+                # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
+                self.left_arm_target_cart_position = self.left_arm_target_cart_position + self.left_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
+                self.left_arm_target_cart_position = 0.015 * self.left_arm_target_cart_position + 0.985 * self.left_arm_effector_pre_position
+                self.left_arm_effector_pre_position = self.left_arm_target_cart_position
+
+                # 计算纯笛卡尔空间下的姿态
+                omega = self.left_arm_effector_current_speed[3:6] * self.interpolation_period / 1000
+                omega_norm = np.linalg.norm(omega)
+
+                if omega_norm > 1e-5:  
+                    axis = omega / omega_norm  
+                    sx = math.sin(omega_norm)
+                    cx = math.cos(omega_norm)
+                    v = 1 - cx
+                    dR = np.array([[axis[0] * axis[0] * v + cx, axis[0] * axis[1] * v - axis[2] * sx, axis[0] * axis[2] * v + axis[1] * sx], 
+                                [axis[0] * axis[1] * v + axis[2] * sx, axis[1] * axis[1] * v + cx, axis[1] * axis[2] * v - axis[0] * sx], 
+                                [axis[0] * axis[2] * v - axis[1] * sx, axis[1] * axis[2] * v + axis[0] * sx, axis[2] * axis[2] * v + cx]])
+
+                else:
+                    dR = np.eye(3)                   
+
+                self.left_arm_target_cart_pose = dR @ self.left_arm_target_cart_pose
+                self.left_arm_target_cart_pose_quat = R.from_matrix(self.left_arm_target_cart_pose).as_quat()
+
+                # 左臂逆解 逆解 逆解 
+                self.Kinematic_Model.left_arm_inverse_kinematics(self.left_arm_target_cart_pose, self.left_arm_target_cart_position, self.joint_target_position[:7])
+
+                if (self.Kinematic_Model.left_arm_inverse_kinematics_solution_success_flag):
+                    ## 导纳控制需要的参数赋值
+                    self.left_arm_effector_pre_acc = self.left_arm_effector_current_acc
+                    self.left_arm_effector_pre_speed = self.left_arm_effector_current_speed
+
+                    self.joint_target_position[:7] = self.Kinematic_Model.left_arm_interpolation_result
+                else:
+                    self.joint_target_position[:7] = self.last_joint_target_position[:7]
+            else:
+                self.joint_target_position[:7] = self.last_joint_target_position[:7]
+
+            
+
+            # 右臂恒力跟踪的处理
+            self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system * right_arm_target_FT_data_index
+            FT_data_err = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system - self.right_arm_target_FT_data
+            Ftmp = math.sqrt(FT_data_err[0] ** 2 + FT_data_err[1] ** 2 + FT_data_err[2] ** 2) 
+            Mtmp = math.sqrt(FT_data_err[3] ** 2 + FT_data_err[4] ** 2 + FT_data_err[5] ** 2)
+            # print("请注意进入拖动状态 Ftmp = {}".format(Ftmp))
+            # print("请注意进入拖动状态 Mtmp = {}".format(Mtmp))
+
+            if (Ftmp > 0.1) or (Mtmp > 0.02):
+                # 正运动学 计算末端位置以及姿态 
+                self.force_control_right_arm_current_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.joint_target_position[7:14]))
+                self.right_arm_target_cart_position = deepcopy(self.force_control_right_arm_current_cart.translation)
+                self.right_arm_target_cart_pose = deepcopy(self.force_control_right_arm_current_cart.rotation)                    
+                self.right_arm_effector_pre_position = self.right_arm_target_cart_position
+
+
+                # 导纳控制输出笛卡尔空间下的速度
+                self.right_arm_effector_current_acc = (FT_data_err - self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control @ self.right_arm_effector_pre_speed) / self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control 
+                self.right_arm_effector_current_acc = (0.5 * self.right_arm_effector_current_acc + 0.5 * self.right_arm_effector_pre_acc)
+
+                self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) * (self.interpolation_period / 1000)
+                self.right_arm_effector_current_speed = 0.5 * self.right_arm_effector_current_speed + 0.5 * self.right_arm_effector_pre_speed
+
+                ## 纯笛卡尔/逆解的方案中有锁轴拖动功能
+                self.right_arm_effector_current_speed = self.right_arm_effector_current_speed * self.right_arm_force_sensor_drag_teach_lock_axis_sign
+
+                # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
+                self.right_arm_target_cart_position = self.right_arm_target_cart_position + self.right_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
+                self.right_arm_target_cart_position = 0.015 * self.right_arm_target_cart_position + 0.985 * self.right_arm_effector_pre_position
+                self.right_arm_effector_pre_position = self.right_arm_target_cart_position
+
+                # 计算纯笛卡尔空间下的姿态
+                omega = self.right_arm_effector_current_speed[3:6] * self.interpolation_period / 1000
+                omega_norm = np.linalg.norm(omega)
+
+                if omega_norm > 1e-5:  
+                    axis = omega / omega_norm  
+                    sx = math.sin(omega_norm)
+                    cx = math.cos(omega_norm)
+                    v = 1 - cx
+                    dR = np.array([[axis[0] * axis[0] * v + cx, axis[0] * axis[1] * v - axis[2] * sx, axis[0] * axis[2] * v + axis[1] * sx], 
+                                [axis[0] * axis[1] * v + axis[2] * sx, axis[1] * axis[1] * v + cx, axis[1] * axis[2] * v - axis[0] * sx], 
+                                [axis[0] * axis[2] * v - axis[1] * sx, axis[1] * axis[2] * v + axis[0] * sx, axis[2] * axis[2] * v + cx]])
+
+                else:
+                    dR = np.eye(3)
+
+                self.right_arm_target_cart_pose = dR @ self.right_arm_target_cart_pose
+                
+                # 左臂逆解 逆解 逆解 
+                self.Kinematic_Model.right_arm_inverse_kinematics(self.right_arm_target_cart_pose, self.right_arm_target_cart_position, self.joint_target_position[7:14])
+
+                if (self.Kinematic_Model.right_arm_inverse_kinematics_solution_success_flag):
+                    ## 导纳控制需要的参数赋值
+                    self.right_arm_effector_pre_acc = self.right_arm_effector_current_acc
+                    self.right_arm_effector_pre_speed = self.right_arm_effector_current_speed
+                    self.joint_target_position[7:14] = self.Kinematic_Model.right_arm_interpolation_result
+                else:
+                    self.joint_target_position[7:14] = self.last_joint_target_position[7:14]
+
+            else:
+                self.joint_target_position[7:14] = self.last_joint_target_position[7:14]
+
+
+            if self.whether_save_constant_force_track_control_position == True:
+                with open("joint_target_position.csv", 'a', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(self.joint_target_position)           
+
+            self.lcm_handler.upper_body_data_publisher(self.joint_target_position)    
+            # 用于保证下发周期是2ms
+            elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
+            delay = max(0, self.interpolation_period / 1000 - elapsed_time)  # 2毫秒减去已经过的时间
+            time.sleep(delay)  # 延迟剩余的时间
+
 
 
