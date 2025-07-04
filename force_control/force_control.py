@@ -312,7 +312,7 @@ class Force_Control():
             start_time = time.time()  # 记录循环开始的时间
 
             self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system = self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system * left_arm_target_FT_data_index
-            FT_data_err = self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system - self.left_arm_target_FT_data
+            FT_data_err = self.left_arm_target_FT_data - self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system
             Ftmp = math.sqrt(FT_data_err[0] ** 2 + FT_data_err[1] ** 2 + FT_data_err[2] ** 2) 
             Mtmp = math.sqrt(FT_data_err[3] ** 2 + FT_data_err[4] ** 2 + FT_data_err[5] ** 2)
             # print("请注意进入拖动状态 Ftmp = {}".format(Ftmp))
@@ -331,10 +331,6 @@ class Force_Control():
 
                 self.left_arm_effector_current_speed = (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc) * (self.interpolation_period / 1000)
                 self.left_arm_effector_current_speed = 0.5 * self.left_arm_effector_current_speed + 0.5 * self.left_arm_effector_pre_speed
-
-                ## 纯笛卡尔/逆解的方案中有锁轴拖动功能
-                self.left_arm_effector_current_speed = self.left_arm_effector_current_speed * self.left_arm_force_sensor_drag_teach_lock_axis_sign
-
 
                 # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
                 self.left_arm_target_cart_position = self.left_arm_target_cart_position + self.left_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
@@ -358,7 +354,6 @@ class Force_Control():
                     dR = np.eye(3)                   
 
                 self.left_arm_target_cart_pose = dR @ self.left_arm_target_cart_pose
-                self.left_arm_target_cart_pose_quat = R.from_matrix(self.left_arm_target_cart_pose).as_quat()
 
                 # 左臂逆解 逆解 逆解 
                 self.Kinematic_Model.left_arm_inverse_kinematics(self.left_arm_target_cart_pose, self.left_arm_target_cart_position, self.joint_target_position[:7])
@@ -378,7 +373,7 @@ class Force_Control():
 
             # 右臂恒力跟踪的处理
             self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system * right_arm_target_FT_data_index
-            FT_data_err = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system - self.right_arm_target_FT_data
+            FT_data_err = self.right_arm_target_FT_data - self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system
             Ftmp = math.sqrt(FT_data_err[0] ** 2 + FT_data_err[1] ** 2 + FT_data_err[2] ** 2) 
             Mtmp = math.sqrt(FT_data_err[3] ** 2 + FT_data_err[4] ** 2 + FT_data_err[5] ** 2)
             # print("请注意进入拖动状态 Ftmp = {}".format(Ftmp))
@@ -399,8 +394,6 @@ class Force_Control():
                 self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) * (self.interpolation_period / 1000)
                 self.right_arm_effector_current_speed = 0.5 * self.right_arm_effector_current_speed + 0.5 * self.right_arm_effector_pre_speed
 
-                ## 纯笛卡尔/逆解的方案中有锁轴拖动功能
-                self.right_arm_effector_current_speed = self.right_arm_effector_current_speed * self.right_arm_force_sensor_drag_teach_lock_axis_sign
 
                 # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
                 self.right_arm_target_cart_position = self.right_arm_target_cart_position + self.right_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
