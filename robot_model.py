@@ -10,6 +10,7 @@ from force_control.force_control_data_cal import Force_Control_Data_Cal
 from force_control.force_control import Force_Control
 
 from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
+from dynamics_related_functions.zero_force_drag import Zero_Force_Drag
 
 class robot_model():
     def __init__(self):
@@ -29,7 +30,8 @@ class robot_model():
         ## 正逆运动学
         self.Kinematic_Model = Kinematic_Model()
 
-        ## 动力学模型
+        ## 动力学相关功能
+        self.Zero_Force_Drag = Zero_Force_Drag(self.lcm_handler)
 
 
         ## 力控需要的数据处理

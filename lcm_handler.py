@@ -138,6 +138,7 @@ class LCMHandler:
             self.right_arm_FT_original = np.array([-ft_data[0], -ft_data[1], ft_data[2],
                                                    -ft_data[3], -ft_data[4], ft_data[5]])
 
+    # 位置模式 传入的参数是期望运行的位置数据
     def upper_body_data_publisher(self, package):
         """
         将输入的关节位姿转换为 LCM 消息
@@ -165,4 +166,25 @@ class LCMHandler:
         self.plan_pre_qpos = np.copy(package)
         self.plan_pre_speed = np.copy(speed)
         self.plan_pre_acc = np.copy(acc)
+        self.lcm.publish('upper_body_cmd', arm_and_hand_ctrl_msg.encode())
+
+    def upper_body_data_publisher_torque_mode(self, torque):
+        arm_and_hand_ctrl_msg = upper_body_cmd_package()
+        arm_and_hand_ctrl_msg.isUsed = 0
+        arm_and_hand_ctrl_msg.control_mode = self.default_control_mode
+
+        ## 一种位置发当前的位置 一种位置发全0
+        arm_and_hand_ctrl_msg.jointPosVec = self.joint_current_pos
+        arm_and_hand_ctrl_msg.jointPosVec = np.zeros(30).tolist()
+
+        arm_and_hand_ctrl_msg.jointCurrentVec  = np.zeros(30).tolist()
+        arm_and_hand_ctrl_msg.jointSpeedVec = np.zeros(30).tolist()
+
+
+        # 将整个上半身30维全部的KPKD值都做了修改 此处没有考虑头部以及腰部的情况 后面上整机可能出问题
+        arm_and_hand_ctrl_msg.jointKp = (np.zeros(30) + 0.02).tolist()
+        arm_and_hand_ctrl_msg.jointKd = (np.zeros(30) + 0.02).tolist()
+
+        arm_and_hand_ctrl_msg.jointTorqueVec = torque
+
         self.lcm.publish('upper_body_cmd', arm_and_hand_ctrl_msg.encode())
