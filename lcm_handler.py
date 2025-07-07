@@ -175,7 +175,7 @@ class LCMHandler:
 
         ## 一种位置发当前的位置 一种位置发全0
         arm_and_hand_ctrl_msg.jointPosVec = self.joint_current_pos
-        arm_and_hand_ctrl_msg.jointPosVec = np.zeros(30).tolist()
+        # arm_and_hand_ctrl_msg.jointPosVec = np.zeros(30).tolist()
 
         arm_and_hand_ctrl_msg.jointCurrentVec  = np.zeros(30).tolist()
         arm_and_hand_ctrl_msg.jointSpeedVec = np.zeros(30).tolist()

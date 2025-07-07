@@ -13,13 +13,13 @@ class Zero_Force_Drag:
 
 
         self.pre_actual_torq = np.zeros(30)
-        self.pre_actual_posi = np.zeros(30)
+        self.pre_actual_posi = self.lcm_handler.joint_current_pos
         self.pre_actual_speed = np.zeros(30)
         self.pre_actual_acc = np.zeros(30)
         self.pre_actual_speed_0 = np.zeros(30) 
 
-        self.k_dyn_l_arm = [1.0, 0.95, 0.96, 0.8, 0.9, 0.0, 0.0]
-        self.k_dyn_r_arm = [0.9, 0.85, 0.5, 0.3, 0.3, 0.0, 0.0]
+        self.k_dyn_l_arm = [1.0, 1.1, 1.0, 0.8, 1.0, 0.0, 0.0]
+        self.k_dyn_r_arm = [1.0, 1.0, 0.8, 0.7, 0.7, 0.0, 0.0]
         self.k_fri_l_arm = [0, 0, 0, 0, 0, 0, 0]
         self.k_fri_r_arm = [0, 0, 0, 0, 0, 0, 0]
 
@@ -57,9 +57,9 @@ class Zero_Force_Drag:
             print("力矩模式-零力拖动！")
             self.dynamic_model_arm_torq = self.dynamic_model.dynamic_cal(self.actual_position[:14], self.actual_speed[:14], self.actual_acc[:14])
 
-            self.actual_jointTorqueVec[:14] = np.array(self.pre_actual_torq[:7]) * (1 - self.alpha) + ( self.alpha * self.dynamic_model_arm_torq[:14])
+            self.actual_jointTorqueVec[:14] = np.array(self.pre_actual_torq[:14]) * (1 - self.alpha) + ( self.alpha * self.dynamic_model_arm_torq[:14])
 
-            self.actual_jointTorqueVec[:14]=(np.array(self.actual_jointTorqueVec[:14]) * (self.k_dyn_l_arm + self.k_dyn_r_arm)).tolist()
+            self.actual_jointTorqueVec[:14] = (np.array(self.actual_jointTorqueVec[:14]) * (self.k_dyn_l_arm + self.k_dyn_r_arm)).tolist()
 
             self.lcm_handler.upper_body_data_publisher_torque_mode(self.actual_jointTorqueVec)
 
