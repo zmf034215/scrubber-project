@@ -7,6 +7,7 @@ from robot_model import robot_model
 
 if __name__ == "__main__":
     robot = robot_model()
+    robot.Collision_Detection.collision_detection_level = 0
     hand_home_pos = np.array([165, 176, 176, 176, 25.0, 165.0, 165, 176, 176, 176, 25.0, 165.0],dtype = np.float64)
     hand_home_pos = list(hand_home_pos / 180 * np.pi)
     robot.movel_plan_target_position_list = [

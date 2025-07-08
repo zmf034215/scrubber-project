@@ -8,6 +8,7 @@ import threading
 import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from dynamics_related_functions.collision_detection import Collision_Detection
 
 
 
@@ -15,6 +16,7 @@ class Force_Control_Data_Cal():
     def __init__(self, LCMHandler):
         # LCM
         self.lcm_handler = LCMHandler
+        self.Collision_Detection = Collision_Detection
         self.Kinematic_Model = Kinematic_Model()
 
         # 力传感器数据滤波缓存区
@@ -38,7 +40,7 @@ class Force_Control_Data_Cal():
         self.left_arm_FT_original_MAF_compensation_base_coordinate_system_pre = np.array([0.0 for i in range(6)])
         self.right_arm_FT_original_MAF_compensation_base_coordinate_system_pre = np.array([0.0 for i in range(6)])       
 
-        self.MOVEJ = MOVEJ(self.lcm_handler)
+        self.MOVEJ = MOVEJ(self.lcm_handler, self.Collision_Detection)
 
         # 传感器数据标定 相关参数设置
         self.hand_home_pos = np.array([165, 176, 176, 176, 25.0, 165.0, 165, 176, 176, 176, 25.0, 165.0],dtype = np.float64)
@@ -90,7 +92,7 @@ class Force_Control_Data_Cal():
         self.FT_data_cal_period = 0.002
         self.FT_data_cal_threading_data_lock = threading.Lock()
         self.FT_data_cal_threading_running = True
-        self.FT_data_cal_threading = threading.Thread(target = self.FT_data_cal)
+        self.FT_data_cal_threading = threading.Thread(target = self.FT_data_cal, daemon = True)
         self.FT_data_cal_threading.start()
 
     def __del__(self):

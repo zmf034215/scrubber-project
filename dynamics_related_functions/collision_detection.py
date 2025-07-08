@@ -9,13 +9,15 @@ class Collision_Detection():
     def __init__(self, LCMHandler):
         self.lcm_handler = LCMHandler
 
+        self.collision_th = None
+
+        ## 下面的这些参数都需要上真机调试
         self.collision_detection_level = 0                    # 添加碰撞检测等级，等级设置为：0、1、2、3、4、5等级，设置为0时，不启用碰撞检测，等级1→5，碰撞阈值逐步提高
-        self.collision_threshold_level_1 = 0.6                # 碰撞检测阈值设定  转矩阈值
+        self.collision_threshold_level_1 = 0.6                # 碰撞检测阈值设定  转矩阈值  
         self.collision_threshold_level_2 = 0.8
         self.collision_threshold_level_3 = 1.0
         self.collision_threshold_level_4 = 1.2
         self.collision_threshold_level_5 = 1.4
-        self.collision_th = None
         self.joint_torq_rated = [10, 10, 8, 8, 8, 3, 3,     10, 10, 8, 8, 8, 3, 3]             # 设置关节转矩额定值，左右臂共14个关节
 
         # 碰撞检测标志位 0：没有碰撞 1：发生碰撞
@@ -31,18 +33,13 @@ class Collision_Detection():
         self.delta_torq = None
         self.compare_delta_torq = None
 
-
-        ## 线程启动要在所有变量声明之后
+    def start_collision_detection(self):
         self.collision_detection_cal_period = 0.002
         self.collision_detection_cal_threading_data_lock = threading.Lock()
         self.collision_detection_cal_threading_running = True
 
         # 在开始插补的时候 启动碰撞校验的线程 初始化的时候 先关闭该线程
-        self.collision_detection_cal_threading = threading.Thread(target = self.collision_detection)
-
-
-    def start_collision_detection(self):
-        print("碰撞检测线程开启！！！")
+        self.collision_detection_cal_threading = threading.Thread(target = self.collision_detection, daemon = True)
         self.collision_detection_cal_threading.start()
 
     def __del__(self):
@@ -89,7 +86,12 @@ class Collision_Detection():
                 if any(self.compare_delta_torq): 
                     print("当前阈值设置下，发生了碰撞！！！")
                     self.collision_detection_index = 1
+                    print("各个关节超出的阈值为 self.delta_torq = {}".format(self.delta_torq))
+                    print(self.compare_delta_torq)
+
                 elif any(self.compare_torq):
+                    print(self.compare_torq)
+                    self.collision_detection_index = 1
                     print("当前电流值超过了额定电流值！！！")
                 else:
                     pass

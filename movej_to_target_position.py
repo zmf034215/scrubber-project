@@ -4,9 +4,10 @@ import math
 from robot_model import robot_model
 
 
-
 if __name__ == "__main__":
     robot = robot_model()
+    # 该参数设置为0 是不进行碰撞检测
+    robot.Collision_Detection.collision_detection_level = 0
     hand_home_pos = np.array([165, 176, 176, 176, 25.0, 165.0, 165, 176, 176, 176, 25.0, 165.0],dtype = np.float64)
     hand_home_pos = list(hand_home_pos / 180 * np.pi)
     robot.movej_plan_target_position_list = [
@@ -16,4 +17,5 @@ if __name__ == "__main__":
                                                  -0.3, -0.7, -1.5, 1.27, 2.2, -0.2, 0] + hand_home_pos + [0, 0, 0, 0]
                                             ]
     time.sleep(1)
+
     robot.robot_movej_to_target_position()

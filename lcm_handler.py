@@ -69,7 +69,7 @@ class LCMHandler:
                                     + self.default_head_control_mode
 
         # 线程启动
-        self.lcm_thread_handle = threading.Thread(target=self.lcm_handle, daemon=True)
+        self.lcm_thread_handle = threading.Thread(target=self.lcm_handle, daemon = True)
         self.lcm_thread_handle.start()
 
     def lcm_handle(self):
