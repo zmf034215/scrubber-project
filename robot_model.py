@@ -1,7 +1,6 @@
-import pinocchio
-import copy
 import numpy as np
 import time
+import csv
 from lcm_handler import LCMHandler
 from trajectory_plan.moveJ import MOVEJ
 from trajectory_plan.moveL import MOVEL
@@ -34,7 +33,7 @@ class robot_model():
         self.MOVEL = MOVEL(self.lcm_handler, self.Collision_Detection)
         self.MOVEJ = MOVEJ(self.lcm_handler, self.Collision_Detection)
         self.MOVEC = MOVEC(self.lcm_handler, self.Collision_Detection)
-
+        self.csv_position_publish_period = 2
 
         ## 力控需要的数据处理
         self.Force_Control_Data_Cal = Force_Control_Data_Cal(self.lcm_handler)
@@ -84,3 +83,22 @@ class robot_model():
             target_joint_position = self.movec_plan_target_position_list[1]
 
             self.MOVEC.moveC2target(current_joint_position, middle_joint_position, target_joint_position)
+
+    
+    def get_csv_position_and_interpolation(self):
+        with open('offline_say_hi_05_1105_new.csv', mode='r', newline='', encoding='utf-8') as file:
+            reader = (csv.reader(file))
+
+            for row in reader:
+                start_time = time.time()  # 记录循环开始的时间
+                row = [float(item) for item in row]
+                interpolation_result = np.array(row)
+                cmd_msg = self.lcm_handler.convert_to_arm_and_hand_cmd_package_msg(interpolation_result)
+
+                # 用于保证下发周期是4ms
+                elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
+                delay = max(0, self.csv_position_publish_period / 1000 - elapsed_time)  # 4毫秒减去已经过的时间
+                time.sleep(delay)  # 延迟剩余的时间
+
+                self.lcm.publish('upper_body_cmd', cmd_msg.encode())
+            print("CSV文件点位运行结束！！！！")
