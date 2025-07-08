@@ -1,93 +1,80 @@
 # arm_control
 
+这个代码库实现了传统协作臂、工业臂的主要功能，其中包括运动规划，基于末端六维力传感器的力控，动力学相关功能。
 
+* 运动规划包含:MOVEJ，MOVEL，MOVEC以及我们会用到的发送固定轨迹,csv文件的功能；
+* 基于末端六维力传感器的力控主要包含：传感器数据的标定与补偿，基于六维力传感器的拖动示教，基于六维力传感器的恒力跟踪；
+* 动力学相关功能主要包含：基于电流环的拖动示教以及碰撞检测；
 
-## Getting started
+## 使用前提
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+* 人型机器人处于45或者46状态机下；
+* 双臂测试平台处于45状态机下；
+* rbctrl中的LCMtopic格式与该库中对应的topic相同；
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## 各个脚本如何使用
 
-## Add your files
+### set_robot_fsm.py
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+机器人开机之后，执行该脚本，会切换到45状态机，或者你自己修改状态机的编号，执行之后如果允许切换的话，状态机都可以切换过去；
 
-```
-cd existing_repo
-git remote add origin https://git.dreame.tech/zhouchongbo/arm_control.git
-git branch -M master
-git push -uf origin master
-```
+### get_current_joint_position.py
 
-## Integrate with your tools
+在机器人进入45/46状态机之后，执行该脚本终端会打印上半身30维各个关节的关节角度，其中1-7位是左臂关节角度，7-14位是右臂关节角度；
 
-- [ ] [Set up project integrations](https://git.dreame.tech/zhouchongbo/arm_control/-/settings/integrations)
+### movej_to_target_position.py
 
-## Collaborate with your team
+在机器人进入45/46状态机之后，执行该脚本上半身30个关节会按照关节空间运行至目标点位；
+**注意：需要按照脚本中的格式，给出需要运行的各个点位对应的关节角度，不知道的话可以用 get_current_joint_position.py获取对应的点位；机器人运行的速度以及加速度可以修改，需要你自己看懂代码在代码中修改，此处不再展开赘述；**
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### movel_to_target_position.py
 
-## Test and Deploy
+在机器人进入45/46状态机之后，执行该脚本双臂会按照笛卡尔空间下的直线运行至目标关节角度对应的笛卡尔位置上；
+**注意：需要按照脚本中的格式，给出需要运行的各个点位对应的关节角度，不知道的话可以用 get_current_joint_position.py获取对应的点位；由于机器人正逆运动学的关系，MOVEL最终位置对应的关节角度不一定是最初设置的关节角度，但是笛卡尔空间下的位姿是相同的；当前手臂逆解采用的是雅可比迭代的方案，逆解可能会存在位置突变；机器人运行的速度以及加速度可以修改，需要你自己看懂代码在代码中修改，此处不再展开赘述；**
 
-Use the built-in continuous integration in GitLab.
+---
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### movec_to_target_position.py
 
-***
+在机器人进入45/46状态机之后，执行该脚本双臂会按照笛卡尔空间下的圆弧运行至目标关节角度对应的笛卡尔位置上；
 
-# Editing this README
+**注意：需要按照脚本中的格式，给出需要运行的各个点位对应的关节角度，不知道的话可以用 get_current_joint_position.py获取对应的点位；由于机器人正逆运动学的关系，MOVEC最终位置对应的关节角度不一定是最初设置的关节角度，但是笛卡尔空间下的位姿是相同的；当前手臂逆解采用的是雅可比迭代的方案，逆解可能会存在位置突变；机器人运行的速度以及加速度可以修改，需要你自己看懂代码在代码中修改，此处不再展开赘述；
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### get_csv_position_and_interpolation.py
 
-## Suggestions for a good README
+在机器人进入45/46状态机之后，执行该脚本后机器人会按照2ms一个周期运行提供的csv中的固定轨迹，运行结束后终端会有提示：CSV点位运行结束！！！！
+注意：在使用该脚本之前，需要先将双臂的位置运行至CSV固定轨迹的第一个点位上，主要是为了保证手臂当前的位置与CSV的第一个点位代表的位置相同，不然的话会出现轨迹位置突变；
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### FT_data_calibration.py
 
-## Name
-Choose a self-explaining name for your project.
+在机器人进入45/46状态机之后，执行该脚本双臂会按照固定的轨迹进行运行，结束之后终端会打印传感器标定的结果，你需要把打印的结果再粘贴到对应的位置上，这样就完成了传感器数据的标定与补偿；
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+**注意：在使用该脚本之前需要保证能够获取到力传感器数据（打开机器人的debug mode），并且在机器人中完成了力传感器的配置；**
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+### plot_left_arm_FT_original_MAF_compensation_base_coordinate_system.py
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+在机器人进入45/46状态机之后，执行该脚本，会绘制出左臂传感器数据在机器人base坐标系下的数据曲线；
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+**注意：理论上，传感器在没有外力接触时，各个方向上的外力以及转矩都是0，如果你发现某个方向上的外力或者转矩值比较大的时候，你需要重新进行一次传感器标定，并且更新标定结果到对应的地方；**
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+### plot_right_arm_FT_original_MAF_compensation_base_coordinate_system.py
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+在机器人进入45/46状态机之后，执行该脚本，会绘制出右臂传感器数据在机器人base坐标系下的数据曲线；
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+**注意：理论上，传感器在没有外力接触时，各个方向上的外力以及转矩都是0，如果你发现某个方向上的外力或者转矩值比较大的时候，你需要重新进行一次传感器标定，并且更新标定结果到对应的地方；**
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### force_sensor_drag_teach.py
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+在机器人进入45/46状态机之后，执行该脚本之后，拖拽末端的力传感器，机器人会根据外力方向产生位移；
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+**注意：在使用该脚本之前需要保证能够获取到力传感器数据（打开机器人的debug mode），并且在机器人中完成了力传感器的配置；在执行之前先绘制一下双臂对应的外力数据，没有明显问题之后再开始拖动；拖动之前尽量让手臂到达一个安全的空间，不要在奇异位置；如果你感觉拖动的不丝滑，不流畅你可以自己调整对应的导纳系数；另外，我实现了锁轴拖动的功能，可以自己看代码怎么打开关闭；**
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### constant_force_tracking_control.py
 
-## License
-For open source projects, say how it is licensed.
+在机器人进入45/46状态机之后，执行该脚本之后，会根据你设置的期望外力，在基于机器人base坐标系各个方向下进行恒力跟踪；
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+**注意：在使用该脚本之前需要保证能够获取到力传感器数据（打开机器人的debug mode），并且在机器人中完成了力传感器的配置；在执行之前先绘制一下双臂对应的外力数据，没有明显问题之后再开始恒力跟踪；恒力跟踪之前尽量让手臂到达一个安全的空间，不要在奇异位置；另外，我实现了锁轴跟踪和全方向跟踪的功能，可以自己看代码怎么打开关闭；**
+
+### torque_mode_zero_force_drag.py
+
+在机器人进入45/46状态机之后，执行该脚本之后，你可以手动拖动机械臂的各个关节到你期望的位置上去；
