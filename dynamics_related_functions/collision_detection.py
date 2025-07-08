@@ -33,6 +33,8 @@ class Collision_Detection():
         self.delta_torq = None
         self.compare_delta_torq = None
 
+        self.collision_detection_cal_threading_start = 0
+
     def start_collision_detection(self):
         self.collision_detection_cal_period = 0.002
         self.collision_detection_cal_threading_data_lock = threading.Lock()
@@ -41,14 +43,18 @@ class Collision_Detection():
         # 在开始插补的时候 启动碰撞校验的线程 初始化的时候 先关闭该线程
         self.collision_detection_cal_threading = threading.Thread(target = self.collision_detection, daemon = True)
         self.collision_detection_cal_threading.start()
+        self.collision_detection_cal_threading_start = 1
 
     def __del__(self):
         self.stop_collision_detection()  # 析构时自动停止线程
 
     def stop_collision_detection(self):
-        self.collision_detection_cal_threading_running = False
-        if self.collision_detection_cal_threading.is_alive():
-            self.collision_detection_cal_threading.join()
+        if(self.collision_detection_cal_threading_start):
+            self.collision_detection_cal_threading_running = False
+            if self.collision_detection_cal_threading.is_alive():
+                self.collision_detection_cal_threading.join()
+        else:
+            pass
 
     # 运行之前需要提前在程序中进行碰撞等级的设置 不设置的话默认是不打开碰撞检测的
     def set_collision_detection_level(self):

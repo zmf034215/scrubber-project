@@ -93,12 +93,11 @@ class robot_model():
                 start_time = time.time()  # 记录循环开始的时间
                 row = [float(item) for item in row]
                 interpolation_result = np.array(row)
-                cmd_msg = self.lcm_handler.convert_to_arm_and_hand_cmd_package_msg(interpolation_result)
 
-                # 用于保证下发周期是4ms
+                self.lcm_handler.upper_body_data_publisher(interpolation_result)
+
+                # 用于保证下发周期是2ms
                 elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
                 delay = max(0, self.csv_position_publish_period / 1000 - elapsed_time)  # 4毫秒减去已经过的时间
                 time.sleep(delay)  # 延迟剩余的时间
-
-                self.lcm.publish('upper_body_cmd', cmd_msg.encode())
             print("CSV文件点位运行结束！！！！")
