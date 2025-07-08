@@ -2,15 +2,18 @@ from lcm_handler import LCMHandler
 import numpy as np
 import time
 from trajectory_plan.seven_segment_speed_plan import seven_segment_speed_plan
+from dynamics_related_functions.collision_detection import Collision_Detection
+import sys
 import csv
 
 
 
 class MOVEJ():
-    def __init__(self, LCMHandler):
+    def __init__(self, LCMHandler, Collision_Detection):
 
         # lcm
         self.lcm_handler = LCMHandler
+        self.Collision_Detection = Collision_Detection
 
 
         # MOVEJ变量
@@ -66,6 +69,7 @@ class MOVEJ():
 
 
     def movej_speed_plan_interpolation(self):
+        self.Collision_Detection.start_collision_detection()
         for interpolation_time in np.arange(0, self.speed_plan.time_length, self.interpolation_period / 1000):
             start_time = time.time()  # 记录循环开始的时间
             if 0 <= interpolation_time <= self.speed_plan.accacc_time:
@@ -100,6 +104,11 @@ class MOVEJ():
             # with open("interpolate_trajectory.csv", 'a', newline='', encoding='utf-8') as csvfile:
             #     writer = csv.writer(csvfile)
             #     writer.writerow(self.interpolation_result)
+
+            if(self.Collision_Detection.collision_detection_index):
+                print("发生了碰撞，结束碰撞检测线程，退出当前插补函数！！！！")
+                self.Collision_Detection.stop_collision_detection()
+                sys.exit()    # 退出程序循环，机械臂停止运动
 
             self.lcm_handler.upper_body_data_publisher(self.interpolation_result)
 
