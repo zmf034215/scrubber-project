@@ -439,6 +439,7 @@ class MOVEC():
             time.sleep(delay)  # 延迟剩余的时间
 
         print("运行结束，到达目标点位！！！")
+        self.Collision_Detection.stop_collision_detection()
 
     def moveC2target(self, current_position, middle_position, target_position):
         self.cal_movec_plan_data(current_position, middle_position, target_position)

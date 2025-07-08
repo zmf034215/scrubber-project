@@ -118,3 +118,5 @@ class MOVEJ():
             time.sleep(delay)  # 延迟剩余的时间
         
         print("运行结束，到达目标点位！！！")
+        self.Collision_Detection.stop_collision_detection()
+

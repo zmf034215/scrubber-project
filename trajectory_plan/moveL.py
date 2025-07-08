@@ -241,6 +241,7 @@ class MOVEL():
 
 
         print("运行结束，到达目标点位！！！")
+        self.Collision_Detection.stop_collision_detection()
 
     # 通过传入目标的笛卡尔位置进行MOVEL
     def moveL2target(self, left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position, robot_current_qpos):
