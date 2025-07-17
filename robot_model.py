@@ -11,6 +11,8 @@ from force_control.force_control import Force_Control
 from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
 from dynamics_related_functions.zero_force_drag import Zero_Force_Drag
 from dynamics_related_functions.collision_detection import Collision_Detection
+from hybrid_force_and_pos_control.hybrid_force_movel import Hybrid_Force_MoveL
+from hybrid_force_and_pos_control.hybrid_force_movec import Hybrid_Force_MoveC
 
 class robot_model():
     def __init__(self):
@@ -40,6 +42,17 @@ class robot_model():
 
         ## 力控
         self.Force_Control = Force_Control(self.lcm_handler, self.Force_Control_Data_Cal)
+
+        ## 力位混合控制
+        self.Hybrid_Force_MoveL = Hybrid_Force_MoveL(self.lcm_handler, self.Collision_Detection, self.Force_Control_Data_Cal)
+        self.Hybrid_Force_MoveC = Hybrid_Force_MoveC(self.lcm_handler, self.Collision_Detection, self.Force_Control_Data_Cal)
+
+
+        self.hybrid_force_movel_plan_target_position_list = None
+        self.hybrid_force_movec_plan_target_position_list = None
+        
+        self.hybrid_force_movel_plan_target_FT_data_list = None
+        self.hybrid_force_movec_plan_target_FT_data_list = None
         
 
 
@@ -83,6 +96,19 @@ class robot_model():
             target_joint_position = self.movec_plan_target_position_list[1]
 
             self.MOVEC.moveC2target(current_joint_position, middle_joint_position, target_joint_position)
+
+    
+    # 执行该函数之前需要先对hybrid_force_movel_plan_target_position_list和hybrid_force_movel_plan_target_FT_data_list赋值
+    def robot_hybrid_force_movel_to_target_position(self):
+        for i in range(len(self.hybrid_force_movel_plan_target_position_list)):
+            with self.lcm_handler.data_lock:
+                if(self.trajectory_segment_index == 0):
+                    current_joint_position = self.lcm_handler.joint_current_pos.copy()
+                    print(current_joint_position)
+                else:
+                    current_joint_position = self.Hybrid_Force_MoveL.interpolation_result
+
+
 
     
     def get_csv_position_and_interpolation(self):
