@@ -107,8 +107,29 @@ class robot_model():
                     print(current_joint_position)
                 else:
                     current_joint_position = self.Hybrid_Force_MoveL.interpolation_result
+                target_joint_position = self.hybrid_force_movel_plan_target_position_list[self.trajectory_segment_index]
+                target_FT_data = self.hybrid_force_movel_plan_target_FT_data_list[self.trajectory_segment_index]
+                self.Hybrid_Force_MoveL.hybrid_force_movel_control(current_joint_position[:7], target_joint_position[:7], current_joint_position[7:14],
+                                                                   target_joint_position[7:14], target_FT_data[:6], target_FT_data[6:12])
+
+                self.trajectory_segment_index = self.trajectory_segment_index + 1
 
 
+        # 执行该函数之前需要先对hybrid_force_movel_plan_target_position_list和hybrid_force_movel_plan_target_FT_data_list赋值
+    def robot_hybrid_force_movel_to_target_position(self):
+        
+        with self.lcm_handler.data_lock:
+            
+            current_joint_position = self.lcm_handler.joint_current_pos.copy()
+            middle_joint_position = self.hybrid_force_movec_plan_target_position_list[0]
+            target_joint_position = self.hybrid_force_movec_plan_target_position_list[1]
+            target_FT_data = self.hybrid_force_movec_plan_target_FT_data_list[1]
+            print(current_joint_position)
+
+            self.Hybrid_Force_MoveL.hybrid_force_movec_control(current_joint_position[:7], target_joint_position[:7], current_joint_position[7:14],
+                                                                target_joint_position[7:14], target_FT_data[:6], target_FT_data[6:12],)
+
+            self.trajectory_segment_index = self.trajectory_segment_index + 1
 
     
     def get_csv_position_and_interpolation(self):

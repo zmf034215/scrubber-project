@@ -69,7 +69,7 @@ class Kinematic_Model:
         eps    = 1e-7
         IT_MAX = 1000
         DT     = 1e-1
-        damp   = 1e-12
+        damp   = 1e-5
         q = current_joint_position
         i = 1 
         while(1):
@@ -80,18 +80,31 @@ class Kinematic_Model:
             if np.linalg.norm(err) < eps:
                 self.left_arm_interpolation_result = q
                 self.left_arm_inverse_kinematics_solution_success_flag = True
-                # print("逆解循环了:{} 次".format(i))
+                print("逆解循环了:{} 次".format(i))
                 break
             if i >= IT_MAX:
                 self.left_arm_inverse_kinematics_solution_success_flag = False
                 self.left_arm_interpolation_result = current_joint_position
+
+
+                print("第{}次迭代".format(i))
+                print("当前末端位姿误差为",err,"\n")
+                print("当前关节角度为",q,"\n")
+                # print("当前雅可比矩阵为",J,"\n")
+                print("当前机器人可操作性为",w,"\n")
                 break
 
             pinocchio.computeJointJacobians(self.left_arm_pin_model, self.left_arm_pin_data)
             J = pinocchio.getJointJacobian(self.left_arm_pin_model, self.left_arm_pin_data, self.left_arm_pin_model.njoints - 1, pinocchio.LOCAL)
             J = -np.dot(pinocchio.Jlog6(iMd.inverse()), J)
             v = - J.T.dot(np.linalg.solve(J.dot(J.T) + damp * np.eye(6), err))
+            # v = -np.linalg.solve(J.T.dot(J) + damp * np.eye(7), J.T.dot(err))
             q = pinocchio.integrate(self.left_arm_pin_model, q, v * DT)
+
+
+            JJT = J @ J.T
+            w = np.sqrt(np.linalg.det(JJT))
+
 
             i += 1
 

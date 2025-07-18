@@ -12,7 +12,7 @@ import struct
 class lcm_response_lcmt(object):
     __slots__ = ["robot_fsm", "switch_flag"]
 
-    __typenames__ = ["int8_t", "int8_t"]
+    __typenames__ = ["int16_t", "int8_t"]
 
     __dimensions__ = [None, None]
 
@@ -27,7 +27,7 @@ class lcm_response_lcmt(object):
         return buf.getvalue()
 
     def _encode_one(self, buf):
-        buf.write(struct.pack(">bb", self.robot_fsm, self.switch_flag))
+        buf.write(struct.pack(">hb", self.robot_fsm, self.switch_flag))
 
     def decode(data):
         if hasattr(data, 'read'):
@@ -41,13 +41,13 @@ class lcm_response_lcmt(object):
 
     def _decode_one(buf):
         self = lcm_response_lcmt()
-        self.robot_fsm, self.switch_flag = struct.unpack(">bb", buf.read(2))
+        self.robot_fsm, self.switch_flag = struct.unpack(">hb", buf.read(3))
         return self
     _decode_one = staticmethod(_decode_one)
 
     def _get_hash_recursive(parents):
         if lcm_response_lcmt in parents: return 0
-        tmphash = (0x9d8ec35cb22984ad) & 0xffffffffffffffff
+        tmphash = (0x8123fb9dbfea9bcb) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff) + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)

@@ -26,6 +26,7 @@ class Hybrid_Force_MoveC:
         self.movec_plan_middle_joint_position = None
         self.movec_plan_target_joint_position = None
 
+    # 左臂变量
         self.movec_plan_current_cart = pin.SE3.Identity()
         self.movec_plan_current_cart_position = None
         self.movec_plan_current_cart_pose = None
@@ -52,6 +53,7 @@ class Hybrid_Force_MoveC:
         self.movec_plan_middle_joint_position = None
         self.movec_plan_target_joint_position = None
 
+    # 右臂变量
         self.right_arm_movec_plan_current_cart = pin.SE3.Identity()
         self.right_arm_movec_plan_current_cart_position = None
         self.right_arm_movec_plan_current_cart_pose = None
@@ -126,19 +128,31 @@ class Hybrid_Force_MoveC:
         self.right_arm_effector_pre_position = np.array([0, 0, 0, 0, 0, 0])
         self.right_arm_effector_pre_acc = np.array([0, 0, 0, 0, 0, 0])
 
+        
 
-
-    def cal_hybrid_force_movec_plan_data(self, current_position, middle_position, target_position,
-                                        left_arm_target_FT_data, right_arm_target_FT_data):
+    def cal_hybrid_force_movec_plan_data_by_joint(self, current_position, middle_position, target_position,
+                                        target_FT_data):
+        # 输入的目标位置是关节指令形式
         self.movec_plan_current_joint_position = np.array(current_position)
         self.movec_plan_middle_joint_position = np.array(middle_position)
         self.movec_plan_target_joint_position = np.array(target_position)
 
+        # 设置用于规划的笛卡尔空间位置（current,middle,target）
+        self.movec_plan_current_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_current_joint_position[:7]))
+        self.right_arm_movec_plan_current_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.movec_plan_current_joint_position[7:14]))
+
+        self.movec_plan_middle_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_middle_joint_position[:7]))
+        self.right_arm_movec_plan_middle_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.movec_plan_middle_joint_position[7:14]))
+
+        self.movec_plan_target_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_target_joint_position[:7]))
+        self.right_arm_movec_plan_target_cart = deepcopy(self.Kinematic_Model.right_arm_forward_kinematics(self.movec_plan_target_joint_position[7:14]))
+
+
         self.cal_left_arm_movec_plan_data()
         self.cal_right_arm_movec_plan_data()
 
-        self.left_arm_target_FT_data = left_arm_target_FT_data
-        self.right_arm_target_FT_data = right_arm_target_FT_data
+        self.left_arm_target_FT_data = target_FT_data[:6]
+        self.right_arm_target_FT_data = target_FT_data[6:12]
         if np.linalg.norm(self.left_arm_target_FT_data) < self.MIN_VAL:
             print("左臂目标力为0，将执行moveC指令")
 
@@ -146,9 +160,37 @@ class Hybrid_Force_MoveC:
             print("右臂目标力为0，将执行moveC指令")
 
 
+    def cal_hybrid_force_movec_plan_data_by_cart(self, left_current_position, left_middle_position, left_target_position,
+                                         right_current_position, right_middle_position, right_target_position,
+                                         target_FT_data):
+        # 输入的目标位置是笛卡尔指令形式
+        # 设置用于规划的笛卡尔空间位置（current,middle,target）
+        self.movec_plan_current_cart = deepcopy(left_current_position)
+        self.right_arm_movec_plan_current_cart = deepcopy(right_current_position)
+
+        self.movec_plan_middle_cart = deepcopy(left_middle_position)
+        self.right_arm_movec_plan_middle_cart = deepcopy(right_middle_position)
+
+        self.movec_plan_target_cart = deepcopy(left_target_position)
+        self.right_arm_movec_plan_target_cart = deepcopy(right_target_position)
+
+
+        self.cal_left_arm_movec_plan_data()
+        self.cal_right_arm_movec_plan_data()
+
+        self.left_arm_target_FT_data = target_FT_data[:6]
+        self.right_arm_target_FT_data = target_FT_data[6:12]
+        if np.linalg.norm(self.left_arm_target_FT_data) < self.MIN_VAL:
+            print("左臂目标力为0，将执行moveC指令")
+
+        if np.linalg.norm(self.right_arm_target_FT_data) < self.MIN_VAL:
+            print("右臂目标力为0，将执行moveC指令")
+
+
+
     def cal_left_arm_movec_plan_data(self):
         # 获取左臂当前位置对应的末端笛卡尔位置姿态和四元数
-        self.movec_plan_current_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_current_joint_position[:7]))
+        # self.movec_plan_current_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_current_joint_position[:7]))
         self.movec_plan_current_cart_position = self.movec_plan_current_cart.translation
         self.movec_plan_current_cart_pose = self.movec_plan_current_cart.rotation
         self.movec_plan_current_cart_quat = quaternion.from_rotation_matrix(self.movec_plan_current_cart_pose)
@@ -157,7 +199,7 @@ class Hybrid_Force_MoveC:
             print("self.movec_plan_current_cart_pose  = {} ".format(self.movec_plan_current_cart_pose))
 
         # 获取左臂中间点位置对应的末端笛卡尔位置姿态和四元数
-        self.movec_plan_middle_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_middle_joint_position[:7]))
+        # self.movec_plan_middle_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_middle_joint_position[:7]))
         self.movec_plan_middle_cart_position = self.movec_plan_middle_cart.translation
         self.movec_plan_middle_cart_pose = self.movec_plan_middle_cart.rotation
         self.movec_plan_middle_cart_quat = quaternion.from_rotation_matrix(self.movec_plan_middle_cart_pose)
@@ -166,7 +208,7 @@ class Hybrid_Force_MoveC:
             print("self.movec_plan_middle_cart_pose  = {} ".format(self.movec_plan_middle_cart_pose))        
 
         # 获取左臂期望位置对应的末端笛卡尔位置姿态和四元数
-        self.movec_plan_target_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_target_joint_position[:7]))
+        # self.movec_plan_target_cart = deepcopy(self.Kinematic_Model.left_arm_forward_kinematics(self.movec_plan_target_joint_position[:7]))
         self.movec_plan_target_cart_position = self.movec_plan_target_cart.translation
         self.movec_plan_target_cart_pose = self.movec_plan_target_cart.rotation
         self.movec_plan_target_cart_quat = quaternion.from_rotation_matrix(self.movec_plan_target_cart_pose)
@@ -566,13 +608,23 @@ class Hybrid_Force_MoveC:
         self.right_arm_cart_interpolation_position = self.right_arm_cart_interpolation_position - distance * normal
 
 
-    def hybrid_force_movec_control(self, left_arm_current_position, left_arm_target_position, right_arm_current_position,
-                                   right_arm_target_position,
-                                   left_arm_target_FT_data, right_arm_target_FT_data, robot_current_qpos):
+    def hybrid_force_movec_control_by_joint(self, current_position, middle_position, target_position, target_FT_data):
         """
-        双臂混合力控制+位置控制
+        双臂混合力控制+位置控制,以关节角作为输入
         """
-        self.cal_hybrid_force_movec_plan_data(left_arm_current_position, left_arm_target_position, right_arm_current_position,
-                                              right_arm_target_position, left_arm_target_FT_data, right_arm_target_FT_data)
+        self.cal_hybrid_force_movec_plan_data_by_joint(current_position, middle_position, target_position, target_FT_data)
+        self.speed_plan = seven_segment_speed_plan(self.movec_plan_jerk_max, self.movec_plan_acc_max, self.movec_plan_speed_max, max(self.right_arm_movec_plan_displacement, self.movec_plan_displacement))
+        self.hybrid_force_movec_plan_interpolation()
+
+
+    def hybrid_force_movec_control_by_cart(self, left_current_position, left_middle_position, left_target_position, 
+                                   right_current_position, right_middle_position, right_target_position, 
+                                   target_FT_data):
+        """
+        双臂混合力控制+位置控制,以笛卡尔位姿作为输入
+        """
+        self.cal_hybrid_force_movec_plan_data_by_cart(left_current_position, left_middle_position, left_target_position, 
+                                                      right_current_position, right_middle_position, right_target_position,
+                                                      target_FT_data)
         self.speed_plan = seven_segment_speed_plan(self.movec_plan_jerk_max, self.movec_plan_acc_max, self.movec_plan_speed_max, max(self.right_arm_movec_plan_displacement, self.movec_plan_displacement))
         self.hybrid_force_movec_plan_interpolation()

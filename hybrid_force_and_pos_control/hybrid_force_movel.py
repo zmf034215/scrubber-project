@@ -109,27 +109,61 @@ class Hybrid_Force_MoveL:
         self.right_arm_admittance_control_M = 0.1
         self.right_arm_admittance_control_B = 0.05
 
-    def cal_hybrid_force_movel_plan_data(self, left_arm_current_position, left_arm_target_position,
-                                        right_arm_current_position, right_arm_target_position,
-                                        left_arm_target_FT_data, right_arm_target_FT_data):
+    def cal_hybrid_force_movel_plan_data_by_joint(self, current_position, target_position, target_FT_data):
+        """
+        输入：左右臂当前与目标的关节,左右臂末端目标力数据
+        对左右臂速度规划参数进行计算
+        """
+        self.left_arm_target_FT_data = target_FT_data[:6]
+        self.right_arm_target_FT_data = target_FT_data[6:12]
+
+        self.movel_plan_current_cart = deepcopy(self.kinematic_model.left_arm_forward_kinematics(current_position[:7]))
+        self.right_arm_movel_plan_current_cart = deepcopy(self.kinematic_model.right_arm_forward_kinematics(current_position[7:14]))
+
+        self.movel_plan_target_cart = deepcopy(self.kinematic_model.right_arm_forward_kinematics(target_position[:7]))    # 计算左臂当前笛卡尔空间位置
+        self.right_arm_movel_plan_target_cart = deepcopy(self.kinematic_model.right_arm_forward_kinematics(target_position[7:14]))    # 计算右臂当前笛卡尔空间位置
+
+        self.cal_hybrid_force_movel_plan_data()
+
+
+
+    def cal_hybrid_force_movel_plan_data_by_cart(self, left_arm_current_cart, right_arm_current_cart, left_arm_target_cart, right_arm_target_cart, target_FT_data):
         """
         输入：左右臂当前与目标的笛卡尔空间位姿,左右臂末端目标力数据
         对左右臂速度规划参数进行计算
+        """        
+        self.left_arm_target_FT_data = target_FT_data[:6]
+        self.right_arm_target_FT_data = target_FT_data[6:12]
+
+        self.movel_plan_current_cart = deepcopy(left_arm_current_cart)
+        self.right_arm_movel_plan_current_cart = deepcopy(right_arm_current_cart)
+
+        self.movel_plan_target_cart = deepcopy(left_arm_target_cart)
+        self.right_arm_movel_plan_target_cart = deepcopy(right_arm_target_cart)
+
+        self.cal_hybrid_force_movel_plan_data()
+
+
+
+
+    def cal_hybrid_force_movel_plan_data(self):
+        """
+        计算hybrid_force_movel速度规划参数
         """
 
         # 左臂部分规划数据设置
 
-        self.left_arm_target_FT_data = left_arm_target_FT_data
-        self.movel_plan_current_cart_position = deepcopy(left_arm_current_position.position)    # 计算左臂当前笛卡尔空间位置
-        self.movel_plan_current_cart_pose = deepcopy(left_arm_current_position.pose)    # 计算左臂当前笛卡尔空间姿态
-        self.movel_plan_current_cart_quat = quaternion.from_rotation_matrix(self.movel_plan_target_cart_pose)    # 计算左臂当前四元数姿态，采用四元数插值
+        # self.left_arm_target_FT_data = target_FT_data[:6]
+        self.movel_plan_current_cart_position = deepcopy(self.movel_plan_current_cart.position)    # 计算左臂当前笛卡尔空间位置
+        self.movel_plan_current_cart_pose = deepcopy(self.movel_plan_current_cart.pose)    # 计算左臂当前笛卡尔空间姿态
+        self.movel_plan_current_cart_quat = quaternion.from_rotation_matrix(self.movel_plan_current_cart)    # 计算左臂当前四元数姿态，采用四元数插值
 
         if self.whether_save_movel_position:
             print("self.movel_plan_current_cart_position  = {} ".format(self.movel_plan_current_cart_position))
             print("self.movel_plan_current_cart_pose  = {} ".format(self.movel_plan_current_cart_pose))
 
-        self.movel_plan_target_cart_position = deepcopy(left_arm_target_position.position)    # 计算左臂目标笛卡尔空间位置
-        self.movel_plan_target_cart_pose = deepcopy(left_arm_target_position.pose)    # 计算左臂目标笛卡尔空间姿态
+        self.movel_plan_target_cart_position = deepcopy(self.movel_plan_target_cart.position)    # 计算左臂目标笛卡尔空间位置
+        self.movel_plan_target_cart_pose = deepcopy(self.movel_plan_target_cart.pose)    # 计算左臂目标笛卡尔空间姿态
         self.movel_plan_target_cart_quat = quaternion.from_rotation_matrix(self.movel_plan_target_cart_pose)    
 
         if self.whether_save_movel_position:
@@ -154,18 +188,18 @@ class Hybrid_Force_MoveL:
     
 
         # 右臂部分规划数据设置
-        self.right_arm_target_FT_data = right_arm_target_FT_data
+        # self.right_arm_target_FT_data = target_FT_data[6:12]
 
-        self.right_arm_movel_plan_current_cart_position = deepcopy(right_arm_current_position.position)    # 计算左臂当前笛卡尔空间位置
-        self.right_arm_movel_plan_current_cart_pose = deepcopy(right_arm_current_position.pose)    # 计算左臂当前笛卡尔空间姿态
+        self.right_arm_movel_plan_current_cart_position = deepcopy(self.right_arm_movel_plan_current_cart.position)    # 计算左臂当前笛卡尔空间位置
+        self.right_arm_movel_plan_current_cart_pose = deepcopy(self.right_arm_movel_plan_current_cart.pose)    # 计算左臂当前笛卡尔空间姿态
         self.right_arm_movel_plan_current_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movel_plan_target_cart_pose)    # 计算左臂当前四元数姿态，采用四元数插值
 
         if self.whether_save_movel_position:
             print("self.movel_plan_current_cart_position  = {} ".format(self.right_arm_movel_plan_current_cart_position))
             print("self.movel_plan_current_cart_pose  = {} ".format(self.right_arm_movel_plan_current_cart_pose))
 
-        self.right_arm_movel_plan_target_cart_position = deepcopy(right_arm_target_position.position)    # 计算左臂目标笛卡尔空间位置
-        self.right_arm_movel_plan_target_cart_pose = deepcopy(right_arm_target_position.pose)    # 计算左臂目标笛卡尔空间姿态
+        self.right_arm_movel_plan_target_cart_position = deepcopy(self.right_arm_movel_plan_target_cart.position)    # 计算左臂目标笛卡尔空间位置
+        self.right_arm_movel_plan_target_cart_pose = deepcopy(self.right_arm_movel_plan_target_cart.pose)    # 计算左臂目标笛卡尔空间姿态
         self.right_arm_movel_plan_target_cart_quat = quaternion.from_rotation_matrix(self.right_arm_movel_plan_target_cart_pose)    
 
         if self.whether_save_movel_position: 
@@ -364,13 +398,22 @@ class Hybrid_Force_MoveL:
         self.Collision_Detection.stop_collision_detection()   
 
 
-    def hybrid_force_movel_control(self, left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position,
-                                   left_arm_target_FT_data, right_arm_target_FT_data, robot_current_qpos):
+    def robot_hybrid_force_movel_control_by_cart(self, left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position,
+                                   left_arm_target_FT_data, right_arm_target_FT_data):
         """
-        双臂混合力控制+位置控制
+        基于笛卡尔位姿输入的双臂混合力控制+位置控制
         """
         
-        self.movel_plan_current_joint_position = robot_current_qpos  
-        self.cal_hybrid_force_movel_plan_data(left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position, left_arm_target_FT_data, right_arm_target_FT_data)  
+        # self.movel_plan_current_joint_position = robot_current_qpos  
+        self.cal_hybrid_force_movel_plan_data_by_cart(left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position, left_arm_target_FT_data, right_arm_target_FT_data)  
         self.speed_plan = seven_segment_speed_plan(self.movel_plan_jerk_max, self.movel_plan_acc_max, self.movel_plan_speed_max, max(self.movel_plan_displacement, self.right_arm_movel_plan_displacement))  
+        self.hybrid_force_movel_plan_interpolation()
+
+
+    def robot_hybrid_force_movel_by_joint(self, current_position, target_position, target_FT_data):
+        """
+        基于关节输入的双臂混合力控制+位置控制
+        """
+        self.cal_hybrid_force_movel_plan_data_by_joint(current_position, target_position, target_FT_data)
+        self.speed_plan = seven_segment_speed_plan(self.movel_plan_jerk_max, self.movel_plan_acc_max, self.movel_plan_speed_max, max(self.movel_plan_displacement, self.right_arm_movel_plan_displacement))
         self.hybrid_force_movel_plan_interpolation()

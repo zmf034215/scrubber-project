@@ -12,7 +12,7 @@ import struct
 class lcm_command_struct(object):
     __slots__ = ["robot_fsm", "x_vel_des", "y_vel_des", "yaw_vel_des", "stop", "rpy_des"]
 
-    __typenames__ = ["int8_t", "float", "float", "float", "float", "float"]
+    __typenames__ = ["int16_t", "float", "float", "float", "float", "float"]
 
     __dimensions__ = [None, None, None, None, None, [3]]
 
@@ -31,7 +31,7 @@ class lcm_command_struct(object):
         return buf.getvalue()
 
     def _encode_one(self, buf):
-        buf.write(struct.pack(">bffff", self.robot_fsm, self.x_vel_des, self.y_vel_des, self.yaw_vel_des, self.stop))
+        buf.write(struct.pack(">hffff", self.robot_fsm, self.x_vel_des, self.y_vel_des, self.yaw_vel_des, self.stop))
         buf.write(struct.pack('>3f', *self.rpy_des[:3]))
 
     def decode(data):
@@ -46,14 +46,14 @@ class lcm_command_struct(object):
 
     def _decode_one(buf):
         self = lcm_command_struct()
-        self.robot_fsm, self.x_vel_des, self.y_vel_des, self.yaw_vel_des, self.stop = struct.unpack(">bffff", buf.read(17))
+        self.robot_fsm, self.x_vel_des, self.y_vel_des, self.yaw_vel_des, self.stop = struct.unpack(">hffff", buf.read(18))
         self.rpy_des = struct.unpack('>3f', buf.read(12))
         return self
     _decode_one = staticmethod(_decode_one)
 
     def _get_hash_recursive(parents):
         if lcm_command_struct in parents: return 0
-        tmphash = (0x8113da7dab9845f3) & 0xffffffffffffffff
+        tmphash = (0x2dd4def29fbde5c4) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff) + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)
