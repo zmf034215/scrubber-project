@@ -398,7 +398,7 @@ class Hybrid_Force_MoveL:
         self.Collision_Detection.stop_collision_detection()   
 
 
-    def robot_hybrid_force_movel_control_by_cart(self, left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position,
+    def robot_hybrid_force_movel_by_cart(self, left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position,
                                    left_arm_target_FT_data, right_arm_target_FT_data):
         """
         基于笛卡尔位姿输入的双臂混合力控制+位置控制
