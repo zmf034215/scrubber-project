@@ -36,7 +36,7 @@ class robot_model():
         self.csv_position_publish_period = 2
 
         ## 力控需要的数据处理
-        self.Force_Control_Data_Cal = Force_Control_Data_Cal(self.lcm_handler)
+        self.Force_Control_Data_Cal = Force_Control_Data_Cal(self.lcm_handler, self.Collision_Detection)
 
         ## 力控
         self.Force_Control = Force_Control(self.lcm_handler, self.Force_Control_Data_Cal)
