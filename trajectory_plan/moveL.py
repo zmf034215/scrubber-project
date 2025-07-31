@@ -13,7 +13,7 @@ import sys
 
 
 class MOVEL():
-    def __init__(self, LCMHandler, Collision_Detection):
+    def __init__(self, LCMHandler, Collision_Detection, Kinematic_Model):
         # lcm
         self.lcm_handler = LCMHandler
         self.Collision_Detection = Collision_Detection
@@ -69,7 +69,7 @@ class MOVEL():
         self.movel_plan_current_cart = pin.SE3.Identity()
         self.movel_plan_target_cart = pin.SE3.Identity()
 
-        self.Kinematic_Model = Kinematic_Model()
+        self.Kinematic_Model = Kinematic_Model
 
     def cal_movel_plan_data(self, left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position):
             # 左臂笛卡尔空间下当前点与期望点之间路径参数的计算
