@@ -13,7 +13,7 @@ import sys
 
 
 class MOVEC():
-    def __init__(self, LCMHandler, Collision_Detection):
+    def __init__(self, LCMHandler, Collision_Detection, Kinematic_Model):
         # lcm
         self.lcm_handler = LCMHandler
 

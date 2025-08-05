@@ -13,7 +13,7 @@ from dynamics_related_functions.collision_detection import Collision_Detection
 
 
 class Force_Control_Data_Cal():
-    def __init__(self, LCMHandler, Collision_Detection):
+    def __init__(self, LCMHandler, Collision_Detection, Kinematic_Model):
         # LCM
         self.lcm_handler = LCMHandler
         self.Collision_Detection = Collision_Detection

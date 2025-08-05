@@ -13,7 +13,7 @@ import sys
 
 
 class MOVEL():
-    def __init__(self, LCMHandler, Collision_Detection,Force_Control_Data_Cal):
+    def __init__(self, LCMHandler, Collision_Detection, Kinematic_Model, Force_Control_Data_Cal):
         # lcm
         self.lcm_handler = LCMHandler
         self.Collision_Detection = Collision_Detection

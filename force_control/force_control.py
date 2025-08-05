@@ -13,7 +13,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 class Force_Control():
-    def __init__(self, LCMHandler, force_control_data_cal):
+    def __init__(self, LCMHandler, force_control_data_cal, Kinematic_Model):
         # lcm
         self.lcm_handler = LCMHandler
         self.force_control_data = force_control_data_cal
