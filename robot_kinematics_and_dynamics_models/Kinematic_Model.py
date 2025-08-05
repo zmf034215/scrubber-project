@@ -80,7 +80,7 @@ class Kinematic_Model:
             if np.linalg.norm(err) < eps:
                 self.left_arm_interpolation_result = q
                 self.left_arm_inverse_kinematics_solution_success_flag = True
-                print("逆解循环了:{} 次".format(i))
+                # print("逆解循环了:{} 次".format(i))
                 break
             if i >= IT_MAX:
                 self.left_arm_inverse_kinematics_solution_success_flag = False

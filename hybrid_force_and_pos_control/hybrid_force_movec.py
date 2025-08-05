@@ -1,5 +1,5 @@
 import numpy as np
-from lcm_handler import LCM_Handler
+# from lcm_handler import LCM_Handler
 from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
 from dynamics_related_functions.zero_force_drag import Zero_Force_Drag
 from dynamics_related_functions.collision_detection import Collision_Detection
@@ -619,10 +619,11 @@ class Hybrid_Force_MoveC:
 
     def hybrid_force_movec_control_by_cart(self, left_current_position, left_middle_position, left_target_position, 
                                    right_current_position, right_middle_position, right_target_position, 
-                                   target_FT_data):
+                                   target_FT_data, threshold):
         """
         双臂混合力控制+位置控制,以笛卡尔位姿作为输入
         """
+
         self.cal_hybrid_force_movec_plan_data_by_cart(left_current_position, left_middle_position, left_target_position, 
                                                       right_current_position, right_middle_position, right_target_position,
                                                       target_FT_data)

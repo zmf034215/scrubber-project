@@ -1,0 +1,8 @@
+source;share/lcm2ros/hook/cmake_prefix_path.ps1
+source;share/lcm2ros/hook/cmake_prefix_path.dsv
+source;share/lcm2ros/hook/cmake_prefix_path.sh
+source;share/lcm2ros/local_setup.bash
+source;share/lcm2ros/local_setup.dsv
+source;share/lcm2ros/local_setup.ps1
+source;share/lcm2ros/local_setup.sh
+source;share/lcm2ros/local_setup.zsh

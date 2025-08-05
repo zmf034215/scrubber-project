@@ -50,10 +50,11 @@ class robot_model():
         ## 基于笛卡尔空间的力位混合控制输入
         ## 输入SE3元素的列表
         self.hybrid_force_movel_plan_left_target_cart_list = None
-        self.hybrid_force_movec_plan_left_target_cart_list = None
-
         self.hybrid_force_movel_plan_right_target_cart_list = None
+
+        self.hybrid_force_movec_plan_left_target_cart_list = None
         self.hybrid_force_movec_plan_right_target_cart_list = None
+        
         ## 基于关节空间的输入
         self.hybrid_force_movel_plan_target_joint_list = None
         self.hybrid_force_movec_plan_target_joint_list = None
@@ -62,7 +63,8 @@ class robot_model():
         self.hybrid_force_movel_plan_target_FT_data_list = None
         self.hybrid_force_movec_plan_target_FT_data_list = None
         
-
+        ## 设置力的阈值
+        self.hybrid_force_threshold = 0
 
     # 执行该函数之前需要先对movej_plan_target_position_list赋值
     def robot_movej_to_target_position(self):
@@ -105,19 +107,37 @@ class robot_model():
 
             self.MOVEC.moveC2target(current_joint_position, middle_joint_position, target_joint_position)
 
-    
+    # 基于笛卡尔空间的混合力movel
     # 执行该函数之前需要先对hybrid_force_movel_plan_target_position_list和hybrid_force_movel_plan_target_FT_data_list赋值
-    def robot_hybrid_force_movel_to_target_cart(self):
+    def robot_hybrid_force_movel_to_target_cart(self, threshold = 0):
+        self.hybrid_force_threshold = threshold
+        target_FT_data = self.hybrid_force_movel_plan_target_FT_data_list[0]
+        # print(target_FT_data)
+
+        if threshold <= 1 and threshold > 0 and np.linalg.norm(np.array(target_FT_data)) > 0:
+            # 如果设计了力执行阈值
+                middle_FT_data = target_FT_data * threshold
+                # 设置纯导纳驱动的中间力
+                self.Force_Control.left_arm_target_FT_data = middle_FT_data[:6]
+                self.Force_Control.right_arm_target_FT_data = middle_FT_data[6:]
+                # 先在力方向上执行纯力导纳控制到指定的力阈值
+                self.Force_Control.constant_force_tracking_control()
+                
         for i in range(len(self.hybrid_force_movel_plan_left_target_cart_list)):
             with self.lcm_handler.data_lock:
                 if(self.trajectory_segment_index == 0):
-                    current_joint_position = self.lcm_handler.joint_current_pos.copy()
-                    left_current_cart_position = self.Kinematic_Model.forward_kinematics(current_joint_position[:7])
-                    right_current_cart_position = self.Kinematic_Model.forward_kinematics(current_joint_position[7:14])
+                    hand_home_pos = np.array([165, 176, 176, 176, 25.0, 165.0, 165, 176, 176, 176, 25.0, 165.0],dtype = np.float64)
+                    hand_home_pos = list(hand_home_pos / 180 * np.pi)
+                    current_joint_position  = np.array([-0.3, 0.7, 1.5, -1.27, -2.2, 0.2, 0,
+                                                 -0.3, -0.7, -1.5, 1.27, 2.2, -0.2, 0] + hand_home_pos + [0, 0, 0, 0])
+                    # current_joint_position = self.lcm_handler.joint_current_pos.copy()
+                    left_current_cart_position = self.Kinematic_Model.left_arm_forward_kinematics(current_joint_position[:7])
+                    right_current_cart_position = self.Kinematic_Model.right_arm_forward_kinematics(current_joint_position[7:14])
                     print(left_current_cart_position)
                     print(right_current_cart_position)
                 else:
                     current_joint_position = self.Hybrid_Force_MoveL.interpolation_result
+                    # print(current_joint_position)
                     left_current_cart_position = self.Kinematic_Model.left_arm_forward_kinematics(current_joint_position[:7])
                     right_current_cart_position = self.Kinematic_Model.right_arm_forward_kinematics(current_joint_position[7:14])
 
@@ -125,16 +145,26 @@ class robot_model():
                 right_target_cart_position = self.hybrid_force_movel_plan_right_target_cart_list[self.trajectory_segment_index]
 
                 target_FT_data = self.hybrid_force_movel_plan_target_FT_data_list[self.trajectory_segment_index]
-                self.Hybrid_Force_MoveL.robot_hybrid_force_movel_by_cart(left_current_cart_position, left_target_cart_position, right_current_cart_position,
-                                                                   right_target_cart_position, target_FT_data[:6], target_FT_data[6:12])
+                self.Hybrid_Force_MoveL.robot_hybrid_force_movel_by_cart(left_current_cart_position, right_current_cart_position, left_target_cart_position, 
+                                                                   right_target_cart_position, target_FT_data)
 
                 self.trajectory_segment_index = self.trajectory_segment_index + 1
 
+    # 基于笛卡尔空间的混合力movec
+    # 执行该函数之前需要先对hybrid_force_movel_plan_target_position_list和hybrid_force_movel_plan_target_FT_data_list赋值
+    def robot_hybrid_force_movec_to_target_cart(self, threshold = 0):
+        self.hybrid_force_threshold = threshold
+        target_FT_data = self.hybrid_force_movec_plan_target_FT_data_list[0]
 
-        # 执行该函数之前需要先对hybrid_force_movel_plan_target_position_list和hybrid_force_movel_plan_target_FT_data_list赋值
-    def robot_hybrid_force_movec_to_target_cart(self):
-        
         with self.lcm_handler.data_lock:
+            if threshold <= 1 and threshold > 0 and np.linalg.norm(np.arrar(target_FT_data)) > 0:
+            # 如果设计了力执行阈值
+                middle_FT_data = target_FT_data * threshold
+                # 设置纯导纳驱动的中间力
+                self.Force_Control.left_arm_target_FT_data = middle_FT_data[:6]
+                self.Force_Control.right_arm_target_FT_data = middle_FT_data[6:]
+                # 先在力方向上执行纯力导纳控制到指定的力阈值
+                self.Force_Control.constant_force_tracking_control()
             
             current_joint_position = self.lcm_handler.joint_current_pos.copy()
             left_current_cart_position = self.Kinematic_Model.left_arm_forward_kinematics(current_joint_position[:7])
@@ -149,12 +179,24 @@ class robot_model():
             right_middle_cart_position = self.hybrid_force_movec_plan_right_target_cart_list[0]
             right_target_cart_position = self.hybrid_force_movec_plan_right_target_cart_list[1]
 
-            target_FT_data = self.hybrid_force_movec_plan_target_FT_data_list[0]
+            
 
             self.Hybrid_Force_MoveC.hybrid_force_movec_control_by_cart(left_current_cart_position, left_middle_cart_position, left_target_cart_position, 
-                                                                       right_current_cart_position, right_middle_cart_position, right_target_cart_position, target_FT_data)
+                                                                       right_current_cart_position, right_middle_cart_position, right_target_cart_position,
+                                                                        target_FT_data, self.hybrid_force_threshold)
+    # 基于关节的混合力movel
+    def robot_hybrid_force_movel_to_target_joint(self, threshold = 0):
+        self.hybrid_force_threshold = threshold
+        target_FT_data = self.hybrid_force_movel_plan_target_FT_data_list[0]
+        if threshold <= 1 and threshold > 0 and np.linalg.norm(np.arrar(target_FT_data)) > 0:
+            # 如果设计了力执行阈值
+                middle_FT_data = target_FT_data * threshold
+                # 设置纯导纳驱动的中间力
+                self.Force_Control.left_arm_target_FT_data = middle_FT_data[:6]
+                self.Force_Control.right_arm_target_FT_data = middle_FT_data[6:]
+                # 先在力方向上执行纯力导纳控制到指定的力阈值
+                self.Force_Control.constant_force_tracking_control()
 
-    def robot_hybrid_force_movel_to_target_joint(self):
         for i in range(len(self.hybrid_force_movel_plan_target_joint_list)):
             with self.lcm_handler.data_lock:
                 if(self.trajectory_segment_index == 0):
@@ -165,21 +207,33 @@ class robot_model():
                     
                 target_joint_position = self.hybrid_force_movel_plan_target_joint_list[self.trajectory_segment_index]
                 target_FT_data = self.hybrid_force_movel_plan_target_FT_data_list[self.trajectory_segment_index]
-                self.Hybrid_Force_MoveL.robot_hybrid_force_movel_by_joint(current_joint_position, target_joint_position, target_FT_data)
+                self.Hybrid_Force_MoveL.robot_hybrid_force_movel_by_joint(current_joint_position, target_joint_position, target_FT_data, self.hybrid_force_threshold)
 
                 self.trajectory_segment_index = self.trajectory_segment_index + 1
 
-
-    def robot_hybrid_force_movec_to_target_joint(self):
+    # 基于关节的混合力movec
+    def robot_hybrid_force_movec_to_target_joint(self, threshold = 0):
+        self.hybrid_force_threshold = threshold
+        target_FT_data = self.hybrid_force_movec_plan_target_FT_data_list[0]
+        
         with self.lcm_handler.data_lock:
+            
+            if threshold <= 1 and threshold > 0 and np.linalg.norm(np.arrar(target_FT_data)) > 0:
+            # 如果设计了力执行阈值
+                middle_FT_data = target_FT_data * threshold
+                # 设置纯导纳驱动的中间力
+                self.Force_Control.left_arm_target_FT_data = middle_FT_data[:6]
+                self.Force_Control.right_arm_target_FT_data = middle_FT_data[6:]
+                # 先在力方向上执行纯力导纳控制到指定的力阈值
+                self.Force_Control.constant_force_tracking_control()
         
             current_joint_position = self.lcm_handler.joint_current_pos.copy()
-            middle_joint_position = self.hybrid_force_movec_plan_target_position_list[0]
-            target_joint_position = self.hybrid_force_movec_plan_target_position_list[1]
+            middle_joint_position = self.hybrid_force_movec_plan_target_joint_list[0]
+            target_joint_position = self.hybrid_force_movec_plan_target_joint_list[1]
             target_FT_data = self.hybrid_force_movec_plan_target_FT_data_list[1]
             print(current_joint_position)
 
-            self.Hybrid_Force_MoveC.hybrid_force_movec_control_by_joint(current_joint_position, middle_joint_position, target_joint_position, target_FT_data)
+            self.Hybrid_Force_MoveC.hybrid_force_movec_control_by_joint(current_joint_position, middle_joint_position, target_joint_position, target_FT_data, self.hybrid_force_threshold)
 
     
     def get_csv_position_and_interpolation(self):
