@@ -17,7 +17,7 @@ class Force_Control_Data_Cal():
         # LCM
         self.lcm_handler = LCMHandler
         self.Collision_Detection = Collision_Detection
-        self.Kinematic_Model = Kinematic_Model()
+        self.Kinematic_Model = Kinematic_Model
 
         # 力传感器数据滤波缓存区
         self.left_arm_FT_original_buff_size = 20

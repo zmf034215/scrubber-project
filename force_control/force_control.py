@@ -17,7 +17,7 @@ class Force_Control():
         # lcm
         self.lcm_handler = LCMHandler
         self.force_control_data = force_control_data_cal
-        self.Kinematic_Model = Kinematic_Model()
+        self.Kinematic_Model = Kinematic_Model
 
         # 机器人笛卡尔空间下的位置、速度、加速度  用于实现导纳控制的拖动
         self.force_control_left_arm_current_cart = pin.SE3.Identity()

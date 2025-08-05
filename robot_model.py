@@ -42,6 +42,7 @@ class robot_model():
         ## 力控
         self.Force_Control = Force_Control(self.lcm_handler, self.Force_Control_Data_Cal, self.Kinematic_Model)
         
+        
 
 
     # 执行该函数之前需要先对movej_plan_target_position_list赋值
