@@ -446,3 +446,106 @@ class Force_Control():
 
 
 
+    def move_down_until_force(self, arm='right', target_force=10.0, hold_time=0.5):
+        """
+        机器人沿Z向下压，直到六维力传感器Z方向力达到 target_force (单位N),
+        稳定保持 hold_time 秒。
+        """
+        print("⬇️ 开始下压，直到 Z 方向接触力达到目标值...")
+        # step_z = -0.001  # 每次下压1mm
+        max_attempts = 50
+        Kpz = 0.0005
+
+        for _ in range(max_attempts):
+            ft = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system if arm == 'right' \
+                else self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system
+
+            if ft is None:
+                continue
+
+            current_force_z = ft[2]
+            if abs(current_force_z) >= target_force:
+                print(f"✅ 接触力已达 {current_force_z:.2f} N，开始保持 {hold_time}s...")
+                time.sleep(hold_time)
+                return
+
+            error = target_force - abs(current_force_z)
+            dz = np.clip(error * Kpz, -0.002, 0.002)
+            delta = np.array([0.0, 0.0, dz])
+            success = self.Kinematic_Model.move_relative(arm, delta)
+            if not success :
+                print("❌ 超出机械臂可达空间！！！")
+                exit()
+            time.sleep(self.interpolation_period / 1000.0)
+
+        print("⚠️ 达不到目标力，停止下压，***程序终止***")
+        exit()
+
+    def desktop_wiping_force_tracking_control(self,arm='right',start_pose = None, hold_time = 0.5,wipe_direction=np.array([1.0, 0.0]), wipe_step=0.002, wipe_total_distance=0.3):
+        """
+        执行桌面擦拭任务：
+        1. 运动到起始位姿；
+        2. 沿Z方向下压，直到目标力（10N）；
+        3. 保持一定时间；
+        4. 沿XY方向擦拭，Z方向保持恒定力。
+        """
+
+        target_force_z = self.right_arm_target_FT_data[2] if arm == 'right' else self.left_arm_target_FT_data[2]
+        
+        # 先移动至起始位姿
+        print("开始移动到起始位姿...")
+        success = self.Kinematic_Model.move_to_start_pose(arm, start_pose)
+        if not success:
+            print("❌ 起始位姿运动失败，程序终止。")
+            exit()
+        else:
+            print("✅ 已到达起始位姿。")
+        # 等待运动完成或加反馈判断
+        time.sleep(2)
+        
+        # 先下压至10N
+        self.move_down_until_force(arm=arm,target_force=abs(target_force_z), hold_time=0.5)
+
+        print("🧽 开始擦拭...")
+        # wipe_steps = int(wipe_total_distance / wipe_step)
+        # dx = wipe_direction[0] * wipe_step
+        # dy = wipe_direction[1] * wipe_step
+       
+
+        # for i in range(wipe_steps):
+        #     # 获取当前力数据
+        #     ft = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system if arm == 'right' \
+        #          else self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system
+            
+        #     if ft is None:
+        #         continue  # 力数据无效，跳过当前循环    
+
+        #     current_force_z = ft[2]
+            
+        #     error_z = target_force_z - current_force_z
+        #     dz = np.clip(error_z * 0.0005, -0.002, 0.002)
+            
+        #     delta = np.array([dx, dy, dz])
+        #     success = self.Kinematic_Model.move_relative(arm, delta)
+        #     if not success :
+        #         print("❌ 超出机械臂可达空间！！！")
+        #         exit()
+
+        #     time.sleep(self.interpolation_period / 1000.0)
+
+        dx = wipe_direction[0] * wipe_total_distance
+        dy = wipe_direction[1] * wipe_total_distance
+        dz = 0.0
+        delta = np.array([dx, dy, dz])
+        success = self.Kinematic_Model.move_relative_FT(arm, delta, target_force_z)
+        print("ca shi****")
+        if not success :
+            print("❌ 超出机械臂可达空间！！！")
+            exit()
+                
+        print(">>> 全部完成，抬升 2 cm")
+        time.sleep(2)
+        self.Kinematic_Model.move_relative(arm, np.array([0, 0, 0.02]))
+        self.Kinematic_Model.back_to_start_pose(arm,start_pose) 
+        print("✅ 擦拭任务完成。")
+
