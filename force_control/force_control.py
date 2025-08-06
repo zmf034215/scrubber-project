@@ -85,6 +85,11 @@ class Force_Control():
         self.left_arm_force_sensor_drag_teach_lock_axis_sign = np.array([1, 1, 1, 1, 1, 1])
         self.right_arm_force_sensor_drag_teach_lock_axis_sign = np.array([1, 1, 1, 1, 1, 1])
 
+        self.arm_FT = None
+        self.target_force_z_FT = None
+        self.dxyz_l = np.array([0, 0, 0])
+        self.dxyz_r = np.array([0, 0, 0])
+
 
     def force_sensor_drag_teach(self):
         self.joint_target_position = self.lcm_handler.joint_current_pos
@@ -489,8 +494,8 @@ class Force_Control():
         3. 保持一定时间；
         4. 沿XY方向擦拭，Z方向保持恒定力。
         """
-
-        target_force_z = self.right_arm_target_FT_data[2] if arm == 'right' else self.left_arm_target_FT_data[2]
+        self.arm_FT = arm
+        self.target_force_z_FT = self.right_arm_target_FT_data[2] if arm == 'right' else self.left_arm_target_FT_data[2]
         
         # 先移动至起始位姿
         print("开始移动到起始位姿...")
@@ -504,41 +509,14 @@ class Force_Control():
         time.sleep(2)
         
         # 先下压至10N
-        self.move_down_until_force(arm=arm,target_force=abs(target_force_z), hold_time=0.5)
+        self.move_down_until_force(arm=arm,target_force=abs(self.target_force_z_FT), hold_time=0.5)
 
         print("🧽 开始擦拭...")
-        # wipe_steps = int(wipe_total_distance / wipe_step)
-        # dx = wipe_direction[0] * wipe_step
-        # dy = wipe_direction[1] * wipe_step
-       
-
-        # for i in range(wipe_steps):
-        #     # 获取当前力数据
-        #     ft = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system if arm == 'right' \
-        #          else self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system
-            
-        #     if ft is None:
-        #         continue  # 力数据无效，跳过当前循环    
-
-        #     current_force_z = ft[2]
-            
-        #     error_z = target_force_z - current_force_z
-        #     dz = np.clip(error_z * 0.0005, -0.002, 0.002)
-            
-        #     delta = np.array([dx, dy, dz])
-        #     success = self.Kinematic_Model.move_relative(arm, delta)
-        #     if not success :
-        #         print("❌ 超出机械臂可达空间！！！")
-        #         exit()
-
-        #     time.sleep(self.interpolation_period / 1000.0)
-
         dx = wipe_direction[0] * wipe_total_distance
         dy = wipe_direction[1] * wipe_total_distance
         dz = 0.0
         delta = np.array([dx, dy, dz])
-        success = self.Kinematic_Model.move_relative_FT(arm, delta, target_force_z)
-        print("ca shi****")
+        success = self.Kinematic_Model.move_relative_FT(arm, delta)
         if not success :
             print("❌ 超出机械臂可达空间！！！")
             exit()
@@ -549,3 +527,23 @@ class Force_Control():
         self.Kinematic_Model.back_to_start_pose(arm,start_pose) 
         print("✅ 擦拭任务完成。")
 
+    def dxyz_cal(self):
+        
+        if self.arm_FT == "left" :
+            ft = self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system
+        
+            current_force_z = ft[2]
+            
+            error_z = self.target_force_z_FT - current_force_z
+            dz = np.clip(error_z * 0.0005, -0.002, 0.002)
+            self.dxyz_l[2] = dz
+        elif self.arm_FT == "right" :
+            ft = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system
+        
+            current_force_z = ft[2]
+            
+            error_z = self.target_force_z_FT - current_force_z
+            dz = np.clip(error_z * 0.0005, -0.002, 0.002)
+            self.dxyz_r[2] = dz
+        else :
+            pass

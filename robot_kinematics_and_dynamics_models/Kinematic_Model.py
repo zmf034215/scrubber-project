@@ -208,8 +208,6 @@ class Kinematic_Model:
         current_position = current_pose.translation
         target_position = current_position + delta_xyz
         R = current_pose.rotation  # 保持姿态
-        print(f"cart_posi_pre = {current_position}\n")
-        print(f"cart_posi = {target_position}\n")
 
         # 求逆解
         if arm == 'right':
@@ -280,7 +278,7 @@ class Kinematic_Model:
         # self.MOVEJ.moveJ2target(target_joint_position, end_posi)
         return True
 
-    def move_relative_FT(self, arm, delta_xyz, target_force_z):
+    def move_relative_FT(self, arm, delta_xyz):
         """
         相对当前位置移动 delta_xyz（保持姿态）
         """
@@ -299,8 +297,6 @@ class Kinematic_Model:
         current_position = current_pose.translation
         target_position = current_position + delta_xyz
         R = current_pose.rotation  # 保持姿态
-        print(f"cart_posi_pre = {current_position}\n")
-        print(f"cart_posi = {target_position}\n")
 
         # 求逆解
         if arm == 'right':
@@ -321,5 +317,5 @@ class Kinematic_Model:
                 return False
 
         # 执行相对运动
-        self.MOVEL.moveL2targetjointposition_FT(current_joint_position, target_joint_position, arm, target_force_z)
+        self.MOVEL.moveL2targetjointposition_FT(current_joint_position, target_joint_position)
         return True
