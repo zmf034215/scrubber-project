@@ -13,7 +13,7 @@ import sys
 
 
 class MOVEC():
-    def __init__(self, LCMHandler, Collision_Detection):
+    def __init__(self, LCMHandler, Collision_Detection, Kinematic_Model):
         # lcm
         self.lcm_handler = LCMHandler
 
@@ -80,7 +80,7 @@ class MOVEC():
         self.movec_plan_acc_max = 0.5
         self.movec_plan_speed_max = 0.2 
 
-        self.Kinematic_Model = Kinematic_Model()
+        self.Kinematic_Model = Kinematic_Model
         self.MIN_VAL = 0.0000001  
         self.interpolation_period = 2
         self.interpolation_result = None

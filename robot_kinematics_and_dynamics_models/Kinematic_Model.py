@@ -27,7 +27,7 @@ class Kinematic_Model:
         self.left_arm_inverse_kinematics_solution_success_flag = None
         self.right_arm_inverse_kinematics_solution_success_flag = None
 
-        
+               
 
     def left_arm_forward_kinematics(self, left_arm_joint_position):
         pinocchio.forwardKinematics(self.left_arm_pin_model, self.left_arm_pin_data, left_arm_joint_position)
@@ -139,7 +139,196 @@ class Kinematic_Model:
 
             i += 1
 
+    def set_robot_interface(self, movej_obj, movel_obj, lcm_handler):
+        """
+        设置上层机器人控制接口
+        """
+        self.MOVEJ = movej_obj
+        self.MOVEL = movel_obj
+        self.lcm_handler = lcm_handler
+        self.interpolation_period = 2  # 默认控制周期为 2ms
+
+    def move_to_start_pose(self, arm, cartesian_pose):
+        """
+        使用 MOVEL 运动到指定位姿（通过逆解 + 关节空间L轨迹）
+        cartesian_pose: [x, y, z, roll, pitch, yaw]
+        """
+        if self.MOVEL is None:
+            print("❌ 未设置 MOVEL 控制器")
+            return False
         
+        hand_home_pos = np.array([165, 176, 176, 176, 25.0, 165.0, 165, 176, 176, 176, 25.0, 165.0],dtype = np.float64)
+        hand_home_pos = list(hand_home_pos / 180 * np.pi)
+        prepare_joint_posi1 = [0,  0.4,  3.14/1.75,  0,  0, 0, 0,
+                               0, -0.4, -3.14/1.75,  0,  0, 0, 0] + hand_home_pos + [0, 0, 0, 0]
+        prepare_joint_posi2 = [3.14/2.5,  0.4,  3.14/1.75, -3.14/1.5, -3.14/2, 0, 0,
+                               3.14/2.5, -0.4, -3.14/1.75,  3.14/1.5,  3.14/2, 0, 0] + hand_home_pos + [0, 0, 0, 0]
 
+        current_joint_position = self.lcm_handler.joint_current_pos.copy()
+        
+        self.MOVEJ.moveJ2target(current_joint_position, prepare_joint_posi1)
+        time.sleep(0.5)
+        self.MOVEJ.moveJ2target( prepare_joint_posi1, prepare_joint_posi2)
+        time.sleep(0.5)
 
+        # 构造目标位姿
+        xyz = cartesian_pose[:3]
+        rpy = cartesian_pose[3:]
+        try:
+            R = pinocchio.rpy.rpyToMatrix(rpy)
+        except Exception as e:
+            print(f"❌ 姿态转换失败: {e}")
+            return False
 
+        # 求逆解
+        if arm == 'right':
+            self.right_arm_inverse_kinematics(R, xyz, np.array(prepare_joint_posi2[7:14]))
+            if self.right_arm_inverse_kinematics_solution_success_flag:
+                target_joint_position_r = self.right_arm_interpolation_result
+                target_joint_position =np.array([0,0.2,0,0,0,0,0] + target_joint_position_r.tolist() + prepare_joint_posi2[14:])
+            else:
+                print("❌ 右臂逆解失败")
+                return False
+        else:
+            self.left_arm_inverse_kinematics(R, xyz, np.array(prepare_joint_posi2[:7]))
+            if self.left_arm_inverse_kinematics_solution_success_flag:
+                target_joint_position_l = self.left_arm_interpolation_result
+                target_joint_position =np.array(target_joint_position_l.tolist() + [0,-0.2,0,0,0,0,0] + prepare_joint_posi2[14:])
+            else:
+                print("❌ 左臂逆解失败")
+                return False
+        
+        self.MOVEL.moveL2targetjointposition(prepare_joint_posi2, target_joint_position)
+        # self.MOVEJ.moveJ2target(prepare_joint_posi2, target_joint_position)
+        return True
+
+    def move_relative(self, arm, delta_xyz):
+        """
+        相对当前位置移动 delta_xyz（保持姿态）
+        """
+        if self.MOVEL is None:
+            print("❌ MOVEL 未设置")
+            return False
+
+        current_joint_position = self.lcm_handler.joint_current_pos.copy()
+
+        # 当前末端位姿
+        if arm == 'right':
+            current_pose = self.right_arm_forward_kinematics(current_joint_position[7:14])
+        else:
+            current_pose = self.left_arm_forward_kinematics(current_joint_position[:7])
+
+        current_position = current_pose.translation
+        target_position = current_position + delta_xyz
+        R = current_pose.rotation  # 保持姿态
+
+        # 求逆解
+        if arm == 'right':
+            self.right_arm_inverse_kinematics(R, target_position, current_joint_position[7:14])
+            if self.right_arm_inverse_kinematics_solution_success_flag:
+                target_joint_position_r = self.right_arm_interpolation_result
+                target_joint_position =np.array(current_joint_position[:7].tolist() + target_joint_position_r.tolist() + current_joint_position[14:].tolist())
+            else:
+                print("❌ 右臂逆解失败")
+                return False
+        else:
+            self.left_arm_inverse_kinematics(R, target_position, current_joint_position[:7])
+            if self.left_arm_inverse_kinematics_solution_success_flag:
+                target_joint_position_l = self.left_arm_interpolation_result
+                target_joint_position =np.array(target_joint_position_l.tolist() + current_joint_position[7:].tolist())
+            else:
+                print("❌ 左臂逆解失败")
+                return False
+
+        # 执行相对运动
+        self.MOVEL.moveL2targetjointposition(current_joint_position, target_joint_position)
+        return True
+
+    def back_to_start_pose(self, arm, cartesian_pose):
+        """
+        使用 MOVEL 运动到指定位姿（通过逆解 + 关节空间L轨迹）
+        cartesian_pose: [x, y, z, roll, pitch, yaw]
+        """
+        if self.MOVEL is None:
+            print("❌ 未设置 MOVEL 控制器")
+            return False
+                
+        current_joint_position = self.lcm_handler.joint_current_pos.copy()
+                
+        # 构造目标位姿
+        xyz = cartesian_pose[:3]
+        rpy = cartesian_pose[3:]
+        try:
+            R = pinocchio.rpy.rpyToMatrix(rpy)
+        except Exception as e:
+            print(f"❌ 姿态转换失败: {e}")
+            return False
+
+        # 求逆解
+        if arm == 'right':
+            self.right_arm_inverse_kinematics(R, xyz, np.array(current_joint_position[7:14]))
+            if self.right_arm_inverse_kinematics_solution_success_flag:
+                target_joint_position_r = self.right_arm_interpolation_result
+                target_joint_position =np.array(current_joint_position[:7].tolist() + target_joint_position_r.tolist() + current_joint_position[14:].tolist())
+                # end_posi = np.array(target_joint_position[:7].tolist() + [3.14/2.5, -0.4, -3.14/1.75,  3.14/1.5,  3.14/2, 0, 0] + target_joint_position[14:].tolist())
+                end_posi = np.array(current_joint_position[:7].tolist() + [3.14/2.5, -0.4, -3.14/1.75,  3.14/1.5,  3.14/2, 0, 0] + current_joint_position[14:].tolist())
+            else:
+                print("❌ 右臂逆解失败")
+                return False
+        else:
+            self.left_arm_inverse_kinematics(R, xyz, np.array(current_joint_position[:7]))
+            if self.left_arm_inverse_kinematics_solution_success_flag:
+                target_joint_position_l = self.left_arm_interpolation_result
+                target_joint_position =np.array(target_joint_position_l.tolist() + current_joint_position[7:14].tolist() + current_joint_position[14:].tolist())
+                # end_posi = np.array([3.14/2.5,  0.4,  3.14/1.75, -3.14/1.5, -3.14/2, 0, 0] + target_joint_position[7:14].tolist() + target_joint_position[14:].tolist())
+                end_posi = np.array([3.14/2.5,  0.4,  3.14/1.75, -3.14/1.5, -3.14/2, 0, 0] + current_joint_position[7:].tolist())
+            else:
+                print("❌ 左臂逆解失败")
+                return False
+        
+        self.MOVEL.moveL2targetjointposition(current_joint_position, target_joint_position)
+        self.MOVEL.moveL2targetjointposition(target_joint_position, end_posi)
+        # self.MOVEJ.moveJ2target(target_joint_position, end_posi)
+        return True
+
+    def move_relative_FT(self, arm, delta_xyz):
+        """
+        相对当前位置移动 delta_xyz（保持姿态）
+        """
+        if self.MOVEL is None:
+            print("❌ MOVEL 未设置")
+            return False
+
+        current_joint_position = self.lcm_handler.joint_current_pos.copy()
+
+        # 当前末端位姿
+        if arm == 'right':
+            current_pose = self.right_arm_forward_kinematics(current_joint_position[7:14])
+        else:
+            current_pose = self.left_arm_forward_kinematics(current_joint_position[:7])
+
+        current_position = current_pose.translation
+        target_position = current_position + delta_xyz
+        R = current_pose.rotation  # 保持姿态
+
+        # 求逆解
+        if arm == 'right':
+            self.right_arm_inverse_kinematics(R, target_position, current_joint_position[7:14])
+            if self.right_arm_inverse_kinematics_solution_success_flag:
+                target_joint_position_r = self.right_arm_interpolation_result
+                target_joint_position =np.array(current_joint_position[:7].tolist() + target_joint_position_r.tolist() + current_joint_position[14:].tolist())
+            else:
+                print("❌ 右臂逆解失败")
+                return False
+        else:
+            self.left_arm_inverse_kinematics(R, target_position, current_joint_position[:7])
+            if self.left_arm_inverse_kinematics_solution_success_flag:
+                target_joint_position_l = self.left_arm_interpolation_result
+                target_joint_position =np.array(target_joint_position_l.tolist() + current_joint_position[7:].tolist())
+            else:
+                print("❌ 左臂逆解失败")
+                return False
+
+        # 执行相对运动
+        self.MOVEL.moveL2targetjointposition_FT(current_joint_position, target_joint_position)
+        return True

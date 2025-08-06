@@ -13,10 +13,11 @@ import sys
 
 
 class MOVEL():
-    def __init__(self, LCMHandler, Collision_Detection):
+    def __init__(self, LCMHandler, Collision_Detection, Kinematic_Model, Force_Control):
         # lcm
         self.lcm_handler = LCMHandler
         self.Collision_Detection = Collision_Detection
+        self.Force_Control = Force_Control
 
         # MOVEL的变量
         self.movel_plan_jerk_max = 0.75
@@ -69,7 +70,11 @@ class MOVEL():
         self.movel_plan_current_cart = pin.SE3.Identity()
         self.movel_plan_target_cart = pin.SE3.Identity()
 
-        self.Kinematic_Model = Kinematic_Model()
+        self.Kinematic_Model = Kinematic_Model
+
+        self.arm_FT = None
+        self.target_force_z_FT = None
+        self.constant_force_track = False
 
     def cal_movel_plan_data(self, left_arm_current_position, left_arm_target_position, right_arm_current_position, right_arm_target_position):
             # 左臂笛卡尔空间下当前点与期望点之间路径参数的计算
@@ -154,8 +159,10 @@ class MOVEL():
             slerped_quaternions = quaternion.slerp(self.movel_plan_current_cart_quat, self.movel_plan_target_cart_quat, 0, 1, self.speed_plan.cur_disp_normalization_ratio)
             self.cart_interpolation_pose = quaternion.as_rotation_matrix(slerped_quaternions)
 
+            if self.constant_force_track :
+                self.Force_Control.dxyz_cal()
 
-            self.left_arm_interp.translation = self.cart_interpolation_position
+            self.left_arm_interp.translation = self.cart_interpolation_position + self.Force_Control.dxyz_l
             self.left_arm_interp.rotation = self.cart_interpolation_pose
 
             # # 左臂逆解 逆解 逆解 
@@ -170,7 +177,7 @@ class MOVEL():
             slerped_quaternions = quaternion.slerp(self.right_arm_movel_plan_current_cart_quat, self.right_arm_movel_plan_target_cart_quat, 0, 1, self.speed_plan.cur_disp_normalization_ratio)
             self.right_arm_cart_interpolation_pose = quaternion.as_rotation_matrix(slerped_quaternions)
 
-            self.right_arm_interp.translation = self.right_arm_cart_interpolation_position
+            self.right_arm_interp.translation = self.right_arm_cart_interpolation_position + self.Force_Control.dxyz_r
             self.right_arm_interp.rotation = self.right_arm_cart_interpolation_pose
 
             # # 右臂逆解 逆解 逆解
@@ -332,7 +339,12 @@ class MOVEL():
         self.movel_speed_plan_interpolation()
 
 
-
+    def moveL2targetjointposition_FT(self, current_joint_position, target_joint_position):
+        self.constant_force_track = True
+        self.cal_movel_plan_data_by_joint_position(current_joint_position, target_joint_position)
+        self.speed_plan = seven_segment_speed_plan(self.movel_plan_jerk_max, self.movel_plan_acc_max, self.movel_plan_speed_max, max(self.movel_plan_displacement, self.right_arm_movel_plan_displacement))
+        self.movel_speed_plan_interpolation()
+        self.constant_force_track = False
 
 
 

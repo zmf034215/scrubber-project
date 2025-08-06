@@ -13,11 +13,11 @@ from dynamics_related_functions.collision_detection import Collision_Detection
 
 
 class Force_Control_Data_Cal():
-    def __init__(self, LCMHandler):
+    def __init__(self, LCMHandler, Collision_Detection, Kinematic_Model):
         # LCM
         self.lcm_handler = LCMHandler
         self.Collision_Detection = Collision_Detection
-        self.Kinematic_Model = Kinematic_Model()
+        self.Kinematic_Model = Kinematic_Model
 
         # 力传感器数据滤波缓存区
         self.left_arm_FT_original_buff_size = 20
@@ -71,22 +71,39 @@ class Force_Control_Data_Cal():
 
 
         ## 传感器标定结果 在更换工装 或者传感器数据不准时 执行FT_data_calibration 把打印的结果替换掉下面的变量
-        self.left_arm_force_sensor_U =  -0.03262756438312473
-        self.left_arm_force_sensor_V =  -0.008130677780862983
-        self.left_arm_force_sensor_G =  5.046246171913459
-        self.left_arm_force_sensor_data_L =  [-0.041007112656776104, 0.16461751075910025, -5.0433936907021515]
-        self.left_arm_force_sensor_com =  [0.013672050589395909, -0.028600226339171392, -0.034997504199793]
-        self.left_arm_force_sensor_data_Foffset =  [3.253067430232532, 2.6557534357589203, 2.0430280661608355]
-        self.left_arm_force_sensor_data_Moffset =  [0.02814232337522351, -0.14687669905210549, 0.13773050274168455]
-        self.left_arm_force_sensor_mass =  0.5149230787666794
-        self.right_arm_force_sensor_U =  -0.0050552972164624975
-        self.right_arm_force_sensor_V =  0.14483456390512195
-        self.right_arm_force_sensor_G =  5.245993771660463
-        self.right_arm_force_sensor_data_L =  [0.7571379319782845, 0.026519944753700897, -5.191000818415489]
-        self.right_arm_force_sensor_com =  [0.030927262600552296, 0.02046379332142403, -0.04045073574611931]
-        self.right_arm_force_sensor_data_Foffset =  [1.9507352952443222, -3.9157230425864413, 3.1944456818709024]
-        self.right_arm_force_sensor_data_Moffset =  [-0.09294613134450672, -0.1554133834741246, -0.15363701753249098]
-        self.right_arm_force_sensor_mass =  0.5353054869041288
+        # self.left_arm_force_sensor_U =  0.04240215883964988
+        # self.left_arm_force_sensor_V =  0.06667997350146875
+        # self.left_arm_force_sensor_G =  4.518628677205159
+        # self.left_arm_force_sensor_data_L =  [0.30080819355352373, -0.19154220187049165, -4.504534508476377]
+        # self.left_arm_force_sensor_com =  [0.024225419528576958, -0.02947521701646732, -0.036486426400962016]
+        # self.left_arm_force_sensor_data_Foffset =  [-0.10526900802226608, -4.212527403004927, 1.5036802451014548]
+        # self.left_arm_force_sensor_data_Moffset =  [-0.19571002249886676, -0.04026660307583767, -0.09950853380923307]
+        # self.left_arm_force_sensor_mass =  0.4610845588984856
+        # self.right_arm_force_sensor_U =  0.052672360450938954
+        # self.right_arm_force_sensor_V =  -0.03543247256886748
+        # self.right_arm_force_sensor_G =  3.962800053693389
+        # self.right_arm_force_sensor_data_L =  [-0.14018773389902922, -0.20863353022447373, -3.9548203138553153]
+        # self.right_arm_force_sensor_com =  [0.02754084380425616, 0.020178036755968166, -0.03721626056663695]
+        # self.right_arm_force_sensor_data_Foffset =  [1.7540575084673393, 4.106628964519683, 2.036708726829942]
+        # self.right_arm_force_sensor_data_Moffset =  [0.19338578261239475, -0.09887502454832245, 0.08129732258104157]
+        # self.right_arm_force_sensor_mass =  0.4043673524176927
+
+        self.left_arm_force_sensor_U =  0.03715872053466875
+        self.left_arm_force_sensor_V =  0.03895195649447339
+        self.left_arm_force_sensor_G =  4.512333072769019
+        self.left_arm_force_sensor_data_L =  [0.17559845802227986, -0.16763394006150878, -4.505797798757147]
+        self.left_arm_force_sensor_com =  [0.024515974713812665, -0.029433643265298008, -0.03663100095429313]
+        self.left_arm_force_sensor_data_Foffset =  [1.5044508213395495, 0.09139721510810883, 4.457937945907834]
+        self.left_arm_force_sensor_data_Moffset =  [-0.1323158229786479, -0.1689830617481714, 0.0496235063924143]
+        self.left_arm_force_sensor_mass =  0.4604421502825529
+        self.right_arm_force_sensor_U =  0.07112932635284717
+        self.right_arm_force_sensor_V =  -0.05864707424391775
+        self.right_arm_force_sensor_G =  4.023231677668154
+        self.right_arm_force_sensor_data_L =  [-0.23521924334434186, -0.2859285130530291, -4.006158998988471]
+        self.right_arm_force_sensor_com =  [0.02756381553338145, 0.019891869831214982, -0.03658435136848216]
+        self.right_arm_force_sensor_data_Foffset =  [1.9428102042080317, 0.47164724269954394, 3.3377626980374213]
+        self.right_arm_force_sensor_data_Moffset =  [0.09141332364949686, -0.15416526631013047, -0.02125749324500919]
+        self.right_arm_force_sensor_mass =  0.41053384466001563
 
         ## 线程启动要在所有变量声明之后
         self.FT_data_cal_period = 0.002
