@@ -3,7 +3,9 @@ from robot_model import robot_model
 import numpy as np
 import pinocchio as pin
 
-def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, target_FT, loop = 1, wipe_direction = np.array([0,0]), wipe_total_distance = 0.1):
+def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, target_FT, 
+                             loop = 1, wipe_direction = np.array([0,0]), wipe_total_distance = 0.1,
+                             rotation_direction = 0, rotation_deg = 0):
     """
     实现桌面擦拭的接口函数
     :param robot: 机器人类实例
@@ -14,6 +16,8 @@ def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, targ
     :param loop: 循环次数
     :param wipe_direction: 擦拭方向
     :param wipe_total_distance: 擦拭距离
+    :rotation_direction: 旋转方向
+    :rotation_deg: 旋转角度
     """
 
 
@@ -37,17 +41,20 @@ def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, targ
     left_current_cart = robot.Kinematic_Model.left_arm_forward_kinematics(robot.lcm_handler.joint_current_pos[:7])
     target_FT_data = None
 
+
     if arm == 'right':
         # 选择右臂运动
         right_target_cart.translation = start_pose[:3]
-        right_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:])
+        right_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + np.array([0, 0, rotation_direction * rotation_deg]))
+
+        # rot = pin.rpy.rpyToMatrix(np.array([0, 0, rotation_direction * rotation_deg])) @ pin.rpy.rpyToMatrix(start_pose[3:])
         right_target_cart.translation[:2] += wipe_direction * wipe_total_distance
 
         left_target_cart = left_current_cart.copy()
         target_FT_data = [0,0,0,0,0,0] + target_FT
     else:
         left_target_cart.translation = start_pose[:3]
-        left_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:])
+        left_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + [0, 0, rotation_direction * rotation_deg])
         left_target_cart.translation += wipe_direction * wipe_total_distance
 
         right_target_cart = right_current_cart.copy()
@@ -91,7 +98,13 @@ if __name__ == "__main__":
     # wipe_step=0.002   # 擦拭运动步长
     wipe_total_distance=0.35  # 擦拭运动距离
 
-    desktop_wiping_interface(robot, arm, start_pose, hold_time, right_arm_target_FT_data, loop=3, wipe_direction=wipe_direction, wipe_total_distance=wipe_total_distance)
+    # 旋转方向 
+    rotation_direction = -1  # 1代表正方向，-1代表反方向，0表示不转动
+    rotation_deg = 1.57    # 旋转角度(弧度制)
+
+    desktop_wiping_interface(robot, arm, start_pose, hold_time, right_arm_target_FT_data, 
+                             loop=3, wipe_direction=wipe_direction, wipe_total_distance=wipe_total_distance,
+                             rotation_direction=rotation_direction, rotation_deg=rotation_deg)
 
     
     
