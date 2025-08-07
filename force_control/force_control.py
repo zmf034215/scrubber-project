@@ -298,7 +298,7 @@ class Force_Control():
             time.sleep(delay)  # 延迟剩余的时间
 
 
-    def constant_force_tracking_control(self):
+    def constant_force_tracking_control(self, flag):
         self.joint_target_position = self.lcm_handler.joint_current_pos
         self.last_joint_target_position = self.joint_target_position
 

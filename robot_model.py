@@ -12,7 +12,7 @@ from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
 from dynamics_related_functions.zero_force_drag import Zero_Force_Drag
 from dynamics_related_functions.collision_detection import Collision_Detection
 from hybrid_force_and_pos_control.hybrid_force_movel import Hybrid_Force_MoveL
-from hybrid_force_and_pos_control.hybrid_force_movec import Hybrid_Force_MoveC
+# from hybrid_force_and_pos_control.hybrid_force_movec import Hybrid_Force_MoveC
 
 class robot_model():
     def __init__(self):
@@ -38,14 +38,14 @@ class robot_model():
         self.csv_position_publish_period = 2
 
         ## 力控需要的数据处理
-        self.Force_Control_Data_Cal = Force_Control_Data_Cal(self.lcm_handler)
+        self.Force_Control_Data_Cal = Force_Control_Data_Cal(self.lcm_handler, self.Collision_Detection, self.Kinematic_Model)
 
         ## 力控
-        self.Force_Control = Force_Control(self.lcm_handler, self.Force_Control_Data_Cal)
+        self.Force_Control = Force_Control(self.lcm_handler, self.Force_Control_Data_Cal, self.Kinematic_Model)
 
         ## 力位混合控制
         self.Hybrid_Force_MoveL = Hybrid_Force_MoveL(self.lcm_handler, self.Collision_Detection, self.Force_Control_Data_Cal)
-        self.Hybrid_Force_MoveC = Hybrid_Force_MoveC(self.lcm_handler, self.Collision_Detection, self.Force_Control_Data_Cal)
+        # self.Hybrid_Force_MoveC = Hybrid_Force_MoveC(self.lcm_handler, self.Collision_Detection, self.Force_Control_Data_Cal)
 
         ## 基于笛卡尔空间的力位混合控制输入
         ## 输入SE3元素的列表
@@ -126,15 +126,11 @@ class robot_model():
         for i in range(len(self.hybrid_force_movel_plan_left_target_cart_list)):
             with self.lcm_handler.data_lock:
                 if(self.trajectory_segment_index == 0):
-                    hand_home_pos = np.array([165, 176, 176, 176, 25.0, 165.0, 165, 176, 176, 176, 25.0, 165.0],dtype = np.float64)
-                    hand_home_pos = list(hand_home_pos / 180 * np.pi)
-                    current_joint_position  = np.array([-0.3, 0.7, 1.5, -1.27, -2.2, 0.2, 0,
-                                                 -0.3, -0.7, -1.5, 1.27, 2.2, -0.2, 0] + hand_home_pos + [0, 0, 0, 0])
-                    # current_joint_position = self.lcm_handler.joint_current_pos.copy()
+
+                    current_joint_position = self.lcm_handler.joint_current_pos.copy()
                     left_current_cart_position = self.Kinematic_Model.left_arm_forward_kinematics(current_joint_position[:7])
                     right_current_cart_position = self.Kinematic_Model.right_arm_forward_kinematics(current_joint_position[7:14])
-                    print(left_current_cart_position)
-                    print(right_current_cart_position)
+
                 else:
                     current_joint_position = self.Hybrid_Force_MoveL.interpolation_result
                     # print(current_joint_position)
