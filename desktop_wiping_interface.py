@@ -45,14 +45,14 @@ def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, targ
     if arm == 'right':
         # 选择右臂运动
         right_target_cart.translation = start_pose[:3]
-        right_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + [0, 0, rotation_direction * rotation_deg])
+        right_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + np.array([0, 0, rotation_direction * rotation_deg]))
         right_target_cart.translation[:2] += wipe_direction * wipe_total_distance
 
         left_target_cart = left_current_cart.copy()
         target_FT_data = [0,0,0,0,0,0] + target_FT
     else:
         left_target_cart.translation = start_pose[:3]
-        left_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + [0, 0, rotation_direction * rotation_deg])
+        left_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + np.array([0, 0, rotation_direction * rotation_deg]))
         left_target_cart.translation += wipe_direction * wipe_total_distance
 
         right_target_cart = right_current_cart.copy()
