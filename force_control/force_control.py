@@ -298,7 +298,7 @@ class Force_Control():
             time.sleep(delay)  # 延迟剩余的时间
 
 
-    def constant_force_tracking_control(self, flag):
+    def constant_force_tracking_control(self, flag = 0):
         self.joint_target_position = self.lcm_handler.joint_current_pos
         self.last_joint_target_position = self.joint_target_position
 
@@ -317,9 +317,9 @@ class Force_Control():
             start_time = time.time()  # 记录循环开始的时间
 
             self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system = self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system * left_arm_target_FT_data_index
-            FT_data_err = self.left_arm_target_FT_data - self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system
-            Ftmp = math.sqrt(FT_data_err[0] ** 2 + FT_data_err[1] ** 2 + FT_data_err[2] ** 2) 
-            Mtmp = math.sqrt(FT_data_err[3] ** 2 + FT_data_err[4] ** 2 + FT_data_err[5] ** 2)
+            FT_data_err_l = self.left_arm_target_FT_data - self.force_control_data.left_arm_FT_original_MAF_compensation_base_coordinate_system
+            Ftmp = math.sqrt(FT_data_err_l[0] ** 2 + FT_data_err_l[1] ** 2 + FT_data_err_l[2] ** 2) 
+            Mtmp = math.sqrt(FT_data_err_l[3] ** 2 + FT_data_err_l[4] ** 2 + FT_data_err_l[5] ** 2)
             # print("请注意进入拖动状态 Ftmp = {}".format(Ftmp))
             # print("请注意进入拖动状态 Mtmp = {}".format(Mtmp))
 
@@ -331,7 +331,7 @@ class Force_Control():
                 self.left_arm_effector_pre_position = self.left_arm_target_cart_position
 
                 # 导纳控制输出笛卡尔空间下的速度
-                self.left_arm_effector_current_acc = (FT_data_err - self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control @ self.left_arm_effector_pre_speed) / self.left_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control
+                self.left_arm_effector_current_acc = (FT_data_err_l - self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control @ self.left_arm_effector_pre_speed) / self.left_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control
                 self.left_arm_effector_current_acc = 0.5 * self.left_arm_effector_current_acc + 0.5 * self.left_arm_effector_pre_acc
 
                 self.left_arm_effector_current_speed = (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc) * (self.interpolation_period / 1000)
@@ -378,9 +378,9 @@ class Force_Control():
 
             # 右臂恒力跟踪的处理
             self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system * right_arm_target_FT_data_index
-            FT_data_err = self.right_arm_target_FT_data - self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system
-            Ftmp = math.sqrt(FT_data_err[0] ** 2 + FT_data_err[1] ** 2 + FT_data_err[2] ** 2) 
-            Mtmp = math.sqrt(FT_data_err[3] ** 2 + FT_data_err[4] ** 2 + FT_data_err[5] ** 2)
+            FT_data_err_r = self.right_arm_target_FT_data - self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system
+            Ftmp = math.sqrt(FT_data_err_r[0] ** 2 + FT_data_err_r[1] ** 2 + FT_data_err_r[2] ** 2) 
+            Mtmp = math.sqrt(FT_data_err_r[3] ** 2 + FT_data_err_r[4] ** 2 + FT_data_err_r[5] ** 2)
             # print("请注意进入拖动状态 Ftmp = {}".format(Ftmp))
             # print("请注意进入拖动状态 Mtmp = {}".format(Mtmp))
 
@@ -393,7 +393,7 @@ class Force_Control():
 
 
                 # 导纳控制输出笛卡尔空间下的速度
-                self.right_arm_effector_current_acc = (FT_data_err - self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control @ self.right_arm_effector_pre_speed) / self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control 
+                self.right_arm_effector_current_acc = (FT_data_err_r - self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control @ self.right_arm_effector_pre_speed) / self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control 
                 self.right_arm_effector_current_acc = (0.5 * self.right_arm_effector_current_acc + 0.5 * self.right_arm_effector_pre_acc)
 
                 self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) * (self.interpolation_period / 1000)
@@ -448,6 +448,10 @@ class Force_Control():
             elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
             delay = max(0, self.interpolation_period / 1000 - elapsed_time)  # 2毫秒减去已经过的时间
             time.sleep(delay)  # 延迟剩余的时间
+
+
+            if flag ==1 and np.linalg.norm(FT_data_err_l) < 0.1 and np.linalg.norm(FT_data_err_r) < 0.1:
+                return
 
 
 

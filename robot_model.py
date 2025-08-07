@@ -12,7 +12,6 @@ from robot_kinematics_and_dynamics_models.Kinematic_Model import Kinematic_Model
 from dynamics_related_functions.zero_force_drag import Zero_Force_Drag
 from dynamics_related_functions.collision_detection import Collision_Detection
 from hybrid_force_and_pos_control.hybrid_force_movel import Hybrid_Force_MoveL
-# from hybrid_force_and_pos_control.hybrid_force_movec import Hybrid_Force_MoveC
 
 class robot_model():
     def __init__(self):
@@ -32,20 +31,21 @@ class robot_model():
         self.movec_plan_target_position_list = None
         self.trajectory_segment_index = 0
 
-        self.MOVEL = MOVEL(self.lcm_handler, self.Collision_Detection)
-        self.MOVEJ = MOVEJ(self.lcm_handler, self.Collision_Detection)
-        self.MOVEC = MOVEC(self.lcm_handler, self.Collision_Detection)
-        self.csv_position_publish_period = 2
 
         ## 力控需要的数据处理
         self.Force_Control_Data_Cal = Force_Control_Data_Cal(self.lcm_handler, self.Collision_Detection, self.Kinematic_Model)
 
+
         ## 力控
         self.Force_Control = Force_Control(self.lcm_handler, self.Force_Control_Data_Cal, self.Kinematic_Model)
 
+        self.MOVEL = MOVEL(self.lcm_handler, self.Collision_Detection, self.Kinematic_Model, self.Force_Control)
+        self.MOVEJ = MOVEJ(self.lcm_handler, self.Collision_Detection)
+        self.MOVEC = MOVEC(self.lcm_handler, self.Collision_Detection, self.Kinematic_Model)
+        self.csv_position_publish_period = 2
+
         ## 力位混合控制
         self.Hybrid_Force_MoveL = Hybrid_Force_MoveL(self.lcm_handler, self.Collision_Detection, self.Force_Control_Data_Cal)
-        # self.Hybrid_Force_MoveC = Hybrid_Force_MoveC(self.lcm_handler, self.Collision_Detection, self.Force_Control_Data_Cal)
 
         ## 基于笛卡尔空间的力位混合控制输入
         ## 输入SE3元素的列表
@@ -112,16 +112,17 @@ class robot_model():
     def robot_hybrid_force_movel_to_target_cart(self, threshold = 0):
         self.hybrid_force_threshold = threshold
         target_FT_data = self.hybrid_force_movel_plan_target_FT_data_list[0]
+        target_FT_data = np.array(target_FT_data)
         # print(target_FT_data)
 
-        if threshold <= 1 and threshold > 0 and np.linalg.norm(np.array(target_FT_data)) > 0:
+        if threshold <= 1 and threshold > 0 and np.linalg.norm(target_FT_data) > 0:
             # 如果设计了力执行阈值
                 middle_FT_data = target_FT_data * threshold
                 # 设置纯导纳驱动的中间力
                 self.Force_Control.left_arm_target_FT_data = middle_FT_data[:6]
                 self.Force_Control.right_arm_target_FT_data = middle_FT_data[6:]
                 # 先在力方向上执行纯力导纳控制到指定的力阈值
-                self.Force_Control.constant_force_tracking_control()
+                self.Force_Control.constant_force_tracking_control(flag=1)
                 
         for i in range(len(self.hybrid_force_movel_plan_left_target_cart_list)):
             with self.lcm_handler.data_lock:
@@ -140,7 +141,7 @@ class robot_model():
                 left_target_cart_position = self.hybrid_force_movel_plan_left_target_cart_list[self.trajectory_segment_index]
                 right_target_cart_position = self.hybrid_force_movel_plan_right_target_cart_list[self.trajectory_segment_index]
 
-                target_FT_data = self.hybrid_force_movel_plan_target_FT_data_list[self.trajectory_segment_index]
+                # target_FT_data = self.hybrid_force_movel_plan_target_FT_data_list[self.trajectory_segment_index]
                 self.Hybrid_Force_MoveL.robot_hybrid_force_movel_by_cart(left_current_cart_position, right_current_cart_position, left_target_cart_position, 
                                                                    right_target_cart_position, target_FT_data)
 

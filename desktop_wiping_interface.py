@@ -57,7 +57,7 @@ def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, targ
     # hybrid_movel 参数赋值
     robot.hybrid_force_movel_plan_left_target_cart_list = [left_target_cart, left_current_cart]
     robot.hybrid_force_movel_plan_right_target_cart_list = [right_target_cart, right_current_cart]
-    robot.hybrid_force_movel_plan_target_FT_data_list = target_FT_data
+    robot.hybrid_force_movel_plan_target_FT_data_list = [target_FT_data]
     # 擦桌子主任务
     for i in range(loop):
         print("开始擦桌子第{}次...".format(i+1))

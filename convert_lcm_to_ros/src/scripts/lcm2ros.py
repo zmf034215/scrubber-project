@@ -63,7 +63,7 @@ class LcmToRos2JointState(Node):
 
             # 发布关节状态lcm数据
             data = upper_body_data_package()
-            data.jointPosVec[:14] = joint_positions
+            data.curJointPosVec[:14] = joint_positions
             self.lcm.publish("upper_body_data", data.encode())
 
 

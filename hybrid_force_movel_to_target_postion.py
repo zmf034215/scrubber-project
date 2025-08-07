@@ -37,9 +37,9 @@ if __name__ == "__main__":
 
 
     # 只对左臂在xy平面进行运动
-    # current_joint = robot.lcm_handler.joint_current_pos.copy()
-    current_joint  = np.array([-0.3, 0.7, 1.5, -1.27, -2.2, 0.2, 0,
-                                                 -0.3, -0.7, -1.5, 1.27, 2.2, -0.2, 0] + hand_home_pos + [0, 0, 0, 0])
+    current_joint = robot.lcm_handler.joint_current_pos.copy()
+    # current_joint  = np.array([-0.3, 0.7, 1.5, -1.27, -2.2, 0.2, 0,
+    #                                              -0.3, -0.7, -1.5, 1.27, 2.2, -0.2, 0] + hand_home_pos + [0, 0, 0, 0])
     left_current_cart = robot.Kinematic_Model.left_arm_forward_kinematics(current_joint[0:7])    
     right_current_cart = robot.Kinematic_Model.right_arm_forward_kinematics(current_joint[7:14])
     
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     
     # 右臂接触力设置 z_force = 10
     robot.hybrid_force_movel_plan_target_FT_data_list = [[0,0,10,0,0,0,  0,0,0,0,0,0],
-                                                         [0,0,10,0,0,0,  0,0,0,0,0,0]]
+                                                         ]
 
     time.sleep(1)
     robot.trajectory_segment_index = 0
