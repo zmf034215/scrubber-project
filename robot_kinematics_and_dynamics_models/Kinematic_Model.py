@@ -69,7 +69,7 @@ class Kinematic_Model:
         eps    = 1e-7
         IT_MAX = 1000
         DT     = 1e-1
-        damp   = 1e-12
+        damp   = 1e-5
         q = current_joint_position
         i = 1 
         while(1):
@@ -91,7 +91,13 @@ class Kinematic_Model:
             J = pinocchio.getJointJacobian(self.left_arm_pin_model, self.left_arm_pin_data, self.left_arm_pin_model.njoints - 1, pinocchio.LOCAL)
             J = -np.dot(pinocchio.Jlog6(iMd.inverse()), J)
             v = - J.T.dot(np.linalg.solve(J.dot(J.T) + damp * np.eye(6), err))
+            # v = -np.linalg.solve(J.T.dot(J) + damp * np.eye(7), J.T.dot(err))
             q = pinocchio.integrate(self.left_arm_pin_model, q, v * DT)
+
+
+            JJT = J @ J.T
+            w = np.sqrt(np.linalg.det(JJT))
+
 
             i += 1
 

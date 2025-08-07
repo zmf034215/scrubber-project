@@ -1,0 +1,6 @@
+setup.py
+lcm2ros/__init__.py
+lcm2ros.egg-info/PKG-INFO
+lcm2ros.egg-info/SOURCES.txt
+lcm2ros.egg-info/dependency_links.txt
+lcm2ros.egg-info/top_level.txt

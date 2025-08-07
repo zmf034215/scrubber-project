@@ -136,7 +136,7 @@ class Hybrid_Force_MoveL:
         输入：左右臂当前与目标的笛卡尔空间位姿,左右臂末端目标力数据
         对左右臂速度规划参数进行计算
         """        
-        target_FT_data = np.array(target_FT_data)
+        
 
         self.left_arm_target_FT_data = target_FT_data[:6]
         self.right_arm_target_FT_data = target_FT_data[6:12]
@@ -285,7 +285,7 @@ class Hybrid_Force_MoveL:
 
                 # 将导纳部分的位移增量映射到力的方向
                 cart_position_increment_2 = self.left_arm_effector_current_speed * (self.interpolation_period / 1000) * np.array(target_FT) / np.linalg.norm(target_FT)
-                cart_position_increment_2 = np.clip(cart_position_increment_2, -0.02, 0.02)
+                cart_position_increment_2 = np.clip(cart_position_increment_2, -0.002, 0.002)
                 self.left_arm_effector_pre_acc = self.left_arm_effector_current_acc
                 self.left_arm_effector_pre_speed = self.left_arm_effector_current_speed
                 # print(cart_position_increment_2)
@@ -418,10 +418,7 @@ class Hybrid_Force_MoveL:
         """
         基于笛卡尔位姿输入的双臂混合力控制+位置控制
         """
-        # hand_home_pos = np.array([165, 176, 176, 176, 25.0, 165.0, 165, 176, 176, 176, 25.0, 165.0],dtype = np.float64)
-        # hand_home_pos = list(hand_home_pos / 180 * np.pi)
-        # self.movel_plan_current_joint_position  = np.array([-0.3, 0.7, 1.5, -1.27, -2.2, 0.2, 0,
-        #                                          -0.3, -0.7, -1.5, 1.27, 2.2, -0.2, 0] + hand_home_pos + [0, 0, 0, 0])
+
         self.movel_plan_current_joint_position = self.lcm_handle.joint_current_pos.copy()
         self.cal_hybrid_force_movel_plan_data_by_cart(left_arm_current_position,right_arm_current_position, left_arm_target_position,  right_arm_target_position, target_FT_data)  
         self.speed_plan = seven_segment_speed_plan(self.movel_plan_jerk_max, self.movel_plan_acc_max, self.movel_plan_speed_max, max(self.movel_plan_displacement, self.right_arm_movel_plan_displacement))  
