@@ -85,13 +85,6 @@ class Kinematic_Model:
             if i >= IT_MAX:
                 self.left_arm_inverse_kinematics_solution_success_flag = False
                 self.left_arm_interpolation_result = current_joint_position
-
-
-                print("第{}次迭代".format(i))
-                print("当前末端位姿误差为",err,"\n")
-                print("当前关节角度为",q,"\n")
-                # print("当前雅可比矩阵为",J,"\n")
-                print("当前机器人可操作性为",w,"\n")
                 break
 
             pinocchio.computeJointJacobians(self.left_arm_pin_model, self.left_arm_pin_data)

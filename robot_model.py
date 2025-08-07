@@ -217,29 +217,7 @@ class robot_model():
 
                 self.trajectory_segment_index = self.trajectory_segment_index + 1
 
-    # 基于关节的混合力movec
-    def robot_hybrid_force_movec_to_target_joint(self, threshold = 0):
-        self.hybrid_force_threshold = threshold
-        target_FT_data = self.hybrid_force_movec_plan_target_FT_data_list[0]
-        
-        with self.lcm_handler.data_lock:
-            
-            if threshold <= 1 and threshold > 0 and np.linalg.norm(np.arrar(target_FT_data)) > 0:
-            # 如果设计了力执行阈值
-                middle_FT_data = target_FT_data * threshold
-                # 设置纯导纳驱动的中间力
-                self.Force_Control.left_arm_target_FT_data = middle_FT_data[:6]
-                self.Force_Control.right_arm_target_FT_data = middle_FT_data[6:]
-                # 先在力方向上执行纯力导纳控制到指定的力阈值
-                self.Force_Control.constant_force_tracking_control()
-        
-            current_joint_position = self.lcm_handler.joint_current_pos.copy()
-            middle_joint_position = self.hybrid_force_movec_plan_target_joint_list[0]
-            target_joint_position = self.hybrid_force_movec_plan_target_joint_list[1]
-            target_FT_data = self.hybrid_force_movec_plan_target_FT_data_list[1]
-            print(current_joint_position)
-
-            self.Hybrid_Force_MoveC.hybrid_force_movec_control_by_joint(current_joint_position, middle_joint_position, target_joint_position, target_FT_data, self.hybrid_force_threshold)
+   
 
     
     def get_csv_position_and_interpolation(self):

@@ -35,7 +35,9 @@ class LcmToRos2JointState(Node):
         # 关节名称列表（请根据实际机械臂关节名称修改）
         self.joint_names = [
             'joint_la1', 'joint_la2', 'joint_la3', 
-            'joint_la4', 'joint_la5', 'joint_la6', 'joint_la7'
+            'joint_la4', 'joint_la5', 'joint_la6', 'joint_la7',
+            'joint_ra1', 'joint_ra2', 'joint_ra3', 
+            'joint_ra4', 'joint_ra5', 'joint_ra6', 'joint_ra7'
         ]
 
     def lcm_callback(self, channel, data):
@@ -45,7 +47,7 @@ class LcmToRos2JointState(Node):
             cmd = upper_body_cmd_package.decode(data)
             
             # 只提取前7个关节角度
-            joint_positions = cmd.jointPosVec[:7]
+            joint_positions = cmd.jointPosVec[:14]
             
             # 创建ROS2关节状态消息
             joint_state = JointState()
