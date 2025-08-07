@@ -66,7 +66,7 @@ def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, targ
     # 擦桌子主任务
     for i in range(loop):
         print("开始擦桌子第{}次...".format(i+1))
-        robot.robot_hybrid_force_movel_to_target_cart(0)
+        robot.robot_hybrid_force_movel_to_target_cart(0.2)
         time.sleep(0.5)
         robot.trajectory_segment_index = 0
 
