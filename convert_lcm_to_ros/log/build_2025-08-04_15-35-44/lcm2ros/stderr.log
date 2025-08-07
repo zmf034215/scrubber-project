@@ -1,5 +1,0 @@
-[31mCMake Error at CMakeLists.txt:18 (install):
-  install TARGETS given target "scripts/lcm2ros.py" which does not exist.
-
-[0m
-gmake: *** [Makefile:254：cmake_check_build_system] 错误 1
