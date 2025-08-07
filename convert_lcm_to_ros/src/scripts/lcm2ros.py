@@ -12,6 +12,7 @@ import sys
 sys.path.append("/home/wjy/mycode/arn_control")
 
 from lcm_data_structure.upper_body_cmd_package import upper_body_cmd_package
+from lcm_data_structure.upper_body_data_package import upper_body_data_package
 
 class LcmToRos2JointState(Node):
     def __init__(self):
@@ -58,6 +59,13 @@ class LcmToRos2JointState(Node):
             # 发布消息
             self.joint_pub.publish(joint_state)
             self.get_logger().debug(f"Published {len(joint_positions)} joint angles")
+
+
+            # 发布关节状态lcm数据
+            data = upper_body_data_package()
+            data.jointPosVec[:14] = joint_positions
+            self.lcm.publish("upper_body_data", data.encode())
+
 
                 
         except Exception as e:
