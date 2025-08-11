@@ -55,6 +55,8 @@ class LcmToRos2JointState(Node):
             joint_state.header.stamp = self.get_clock().now().to_msg()
             joint_state.name = self.joint_names
             joint_state.position = joint_positions
+            # joint_state.position[4] *= -1  
+            # joint_state.position[11] *= -1  
             
             # 发布消息
             self.joint_pub.publish(joint_state)

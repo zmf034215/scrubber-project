@@ -277,10 +277,10 @@ class Hybrid_Force_MoveL:
 
 
                 # 采用导纳控制计算末端位移（将三分力看作一维，避免对轨迹规划部分产生影响）
-                self.left_arm_effector_current_acc = (err_F_num - self.left_arm_admittance_control_B * np.linalg.norm(self.left_arm_effector_pre_acc)) / self.left_arm_admittance_control_M
+                self.left_arm_effector_current_acc = -(err_F_num - self.left_arm_admittance_control_B * np.linalg.norm(self.left_arm_effector_pre_acc)) / self.left_arm_admittance_control_M
                 self.left_arm_effector_current_acc = 0.5 * (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc)
 
-                self.left_arm_effector_current_speed = 0.5 * (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc) * (self.interpolation_period / 1000) + self.left_arm_effector_pre_speed
+                self.left_arm_effector_current_speed = 0.5 * (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc) * (self.interpolation_period / 1000) 
                 self.left_arm_effector_current_speed = 0.5 * self.left_arm_effector_current_speed + 0.5 * self.left_arm_effector_pre_speed
 
                 # 将导纳部分的位移增量映射到力的方向
@@ -317,10 +317,10 @@ class Hybrid_Force_MoveL:
                 err_F_num = np.dot(target_FT - current_FT, target_FT) / np.linalg.norm(target_FT)
 
                 # 采用导纳控制计算末端位移（将三分力看作一维，避免对轨迹规划部分产生影响）
-                self.right_arm_effector_current_acc = (err_F_num - self.right_arm_admittance_control_B * np.linalg.norm(self.right_arm_effector_pre_acc)) / self.right_arm_admittance_control_M
+                self.right_arm_effector_current_acc = -(err_F_num - self.right_arm_admittance_control_B * np.linalg.norm(self.right_arm_effector_pre_acc)) / self.right_arm_admittance_control_M
                 self.right_arm_effector_current_acc = 0.5 * (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc)
 
-                self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) * (self.interpolation_period / 1000) + self.right_arm_effector_pre_speed
+                self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) * (self.interpolation_period / 1000)
                 self.right_arm_effector_current_speed = 0.5 * self.right_arm_effector_current_speed + 0.5 * self.right_arm_effector_pre_speed
 
                 self.right_arm_effector_pre_acc = self.right_arm_effector_current_acc

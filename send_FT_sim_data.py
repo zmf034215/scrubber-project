@@ -10,8 +10,8 @@ def send_ft_data():
     
     # 设置第三个数据（original_Fz）为10.0
     # 注意：由于数据是列表类型，需要通过索引修改
-    ft_data.original_Fz[0] = 10.0
-    
+    ft_data.original_Fx[0] = -10
+
     # 其他数据保持默认初始值0.0，也可根据需要设置
     # ft_data.original_Fx[0] = 0.0  # 默认值
     # ft_data.original_Fy[0] = 0.0  # 默认值
@@ -26,7 +26,7 @@ def send_ft_data():
         start_time = time.time()
         
         # 发送LCM消息
-        lc.publish("ecat_debug_FT_dataARM_FT_L", ft_data.encode())
+        lc.publish("ecat_debug_FT_dataARM_FT_R", ft_data.encode())
         
         # 计算需要等待的时间（4ms = 0.004秒）
         elapsed = time.time() - start_time

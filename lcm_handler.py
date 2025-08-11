@@ -104,9 +104,9 @@ class LCMHandler:
         """
         监听左臂力传感器数据
         """
-        if not self.joint_current_pos_updated.wait(timeout=0.001):
-            print("⚠️ Warning: joint_current_pos not updated, skipping FT data compensation")
-            return
+        # if not self.joint_current_pos_updated.wait(timeout=0.001):
+        #     print("⚠️ Warning: joint_current_pos not updated, skipping FT data compensation")
+        #     return
 
         with self.joint_current_pos_lock:
             msg = ecat_debug_ft_data_lcmt.decode(data)

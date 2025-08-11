@@ -18,13 +18,17 @@ if __name__ == "__main__":
     start_pose = np.array([0.3, -0.55, 0.2, -1.8, 0.75, 1.8])  # [x, y, z, roll, pitch, yaw]
 
     robot.Force_Control.left_arm_target_FT_data = np.array([0, 0, 3, 0, 0, 0])
-    robot.Force_Control.right_arm_target_FT_data = np.array([0, 0, 1, 0, 0, 0])
+    robot.Force_Control.right_arm_target_FT_data = np.array([0, 0, 2, 0, 0, 0])
     hold_time= 0.5    #  运动到擦拭起始位置后，暂停保持当前位置的时间 秒
     wipe_direction=np.array([0.0, 1.0])  #  擦拭运动方向X、Y，左臂=[0.0, -1.0]，右臂=[0.0, 1.0]
     wipe_step=0.002   # 擦拭运动步长
     wipe_total_distance=0.35  # 擦拭运动距离
+    loop = 5
+    rotation_direction = 1
+    rotation_deg = 1
     
-    robot.Force_Control.desktop_wiping_force_tracking_control(arm,start_pose, hold_time,wipe_direction, wipe_step, wipe_total_distance)
+    robot.Force_Control.desktop_wiping_force_tracking_control(arm,start_pose, hold_time,wipe_direction, wipe_step, wipe_total_distance,
+                                                              loop, rotation_direction, rotation_deg)
 
     # for cycle in range(3):  # 往返3次
     #     robot.Force_Control.desktop_wiping_force_tracking_control(arm, start_pose, hold_time, 

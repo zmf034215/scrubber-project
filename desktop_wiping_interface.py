@@ -68,7 +68,8 @@ def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, targ
     # 擦桌子主任务
     for i in range(loop):
         print("开始擦桌子第{}次...".format(i+1))
-        robot.robot_hybrid_force_movel_to_target_cart(0)
+        thresold = 1 if i == 0 else 0
+        robot.robot_hybrid_force_movel_to_target_cart(thresold)
         time.sleep(0.5)
         robot.trajectory_segment_index = 0
 
@@ -92,15 +93,15 @@ if __name__ == "__main__":
 
     # 设置目标力
     left_arm_target_FT_data = [0, 0, 3, 0, 0, 0]
-    right_arm_target_FT_data = [0, 0, 6.25, 0, 0, 0]
+    right_arm_target_FT_data = [0, 0, 2, 0, 0, 0]
     hold_time= 0.5    #  运动到擦拭起始位置后，暂停保持当前位置的时间 秒
     wipe_direction=np.array([0.0, 1.0])  #  擦拭运动方向X、Y，左臂=[0.0, -1.0]，右臂=[0.0, 1.0]
     # wipe_step=0.002   # 擦拭运动步长
     wipe_total_distance=0.35  # 擦拭运动距离
 
     # 旋转方向 
-    rotation_direction = -1  # 1代表正方向，-1代表反方向，0表示不转动
-    rotation_deg = 1.57    # 旋转角度(弧度制)
+    rotation_direction = 0 # 1代表正方向，-1代表反方向，0表示不转动
+    rotation_deg = 0    # 旋转角度(弧度制)
 
     desktop_wiping_interface(robot, arm, start_pose, hold_time, right_arm_target_FT_data, 
                              loop=3, wipe_direction=wipe_direction, wipe_total_distance=wipe_total_distance,
