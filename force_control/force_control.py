@@ -73,8 +73,8 @@ class Force_Control():
         self.left_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control = np.array([0.1, 0.1, 0.1, 10, 10, 10])
         self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 0.5, 5, 5, 5])
 
-        self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control = np.array([0.1, 0.1, 0.1, 10, 10, 10])
-        self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 0.5, 5, 5, 5])
+        self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control = np.array([0.1, 0.1, 10, 10, 10, 10])
+        self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 100, 5, 5, 5])
 
         self.interpolation_period = 2
         self.joint_target_position = None
@@ -189,7 +189,6 @@ class Force_Control():
                     # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
                     self.right_arm_target_cart_position = self.right_arm_target_cart_position + self.right_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
                     self.right_arm_target_cart_position = 0.015 * self.right_arm_target_cart_position + 0.985 * self.right_arm_effector_pre_position
-                    self.right_arm_effector_pre_position = self.right_arm_target_cart_position
 
                     # 计算纯笛卡尔空间下的姿态
                     omega = self.right_arm_effector_current_speed[3:6] * self.interpolation_period / 1000
@@ -331,7 +330,7 @@ class Force_Control():
                 self.left_arm_effector_pre_position = self.left_arm_target_cart_position
 
                 # 导纳控制输出笛卡尔空间下的速度
-                self.left_arm_effector_current_acc = (FT_data_err_l - self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control @ self.left_arm_effector_pre_speed) / self.left_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control
+                self.left_arm_effector_current_acc = -(FT_data_err_l - self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control * self.left_arm_effector_pre_speed) / self.left_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control
                 self.left_arm_effector_current_acc = 0.5 * self.left_arm_effector_current_acc + 0.5 * self.left_arm_effector_pre_acc
 
                 self.left_arm_effector_current_speed = (self.left_arm_effector_current_acc + self.left_arm_effector_pre_acc) * (self.interpolation_period / 1000)
@@ -339,8 +338,7 @@ class Force_Control():
 
                 # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
                 self.left_arm_target_cart_position = self.left_arm_target_cart_position + self.left_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
-                self.left_arm_target_cart_position = 0.015 * self.left_arm_target_cart_position + 0.985 * self.left_arm_effector_pre_position
-                self.left_arm_effector_pre_position = self.left_arm_target_cart_position
+                self.left_arm_target_cart_position = 0.1 * self.left_arm_target_cart_position + 0.9 * self.left_arm_effector_pre_position
 
                 # 计算纯笛卡尔空间下的姿态
                 omega = self.left_arm_effector_current_speed[3:6] * self.interpolation_period / 1000
@@ -378,11 +376,12 @@ class Force_Control():
 
             # 右臂恒力跟踪的处理
             self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system = self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system * right_arm_target_FT_data_index
-            FT_data_err_r = self.right_arm_target_FT_data - self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system
+            FT_data_err_r = -self.right_arm_target_FT_data + self.force_control_data.right_arm_FT_original_MAF_compensation_base_coordinate_system
             Ftmp = math.sqrt(FT_data_err_r[0] ** 2 + FT_data_err_r[1] ** 2 + FT_data_err_r[2] ** 2) 
             Mtmp = math.sqrt(FT_data_err_r[3] ** 2 + FT_data_err_r[4] ** 2 + FT_data_err_r[5] ** 2)
-            # print("请注意进入拖动状态 Ftmp = {}".format(Ftmp))
-            # print("请注意进入拖动状态 Mtmp = {}".format(Mtmp))
+            if flag == 0:
+                print("请注意进入拖动状态 Ftmp = {}".format(Ftmp))
+                print("请注意进入拖动状态 Mtmp = {}".format(Mtmp))
 
             if (Ftmp > 0.1) or (Mtmp > 0.02):
                 # 正运动学 计算末端位置以及姿态 
@@ -393,18 +392,19 @@ class Force_Control():
 
 
                 # 导纳控制输出笛卡尔空间下的速度
-                self.right_arm_effector_current_acc = (FT_data_err_r - self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control @ self.right_arm_effector_pre_speed) / self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control 
-                self.right_arm_effector_current_acc = (0.5 * self.right_arm_effector_current_acc + 0.5 * self.right_arm_effector_pre_acc)
+                self.right_arm_effector_current_acc = (FT_data_err_r - self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control * self.right_arm_effector_pre_speed) / self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control 
+                self.right_arm_effector_current_speed = self.right_arm_effector_current_acc * (self.interpolation_period / 1000) + self.right_arm_effector_pre_speed
+                self.right_arm_target_cart_position = self.right_arm_effector_pre_position + self.right_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
+                
+                # self.right_arm_effector_current_acc = (0.5 * self.right_arm_effector_current_acc + 0.5 * self.right_arm_effector_pre_acc)
 
-                self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) * (self.interpolation_period / 1000)
-                self.right_arm_effector_current_speed = 0.5 * self.right_arm_effector_current_speed + 0.5 * self.right_arm_effector_pre_speed
+                # self.right_arm_effector_current_speed = (self.right_arm_effector_current_acc + self.right_arm_effector_pre_acc) * (self.interpolation_period / 1000) + self.right_arm_effector_pre_speed
+                # self.right_arm_effector_current_speed = 0.5 * self.right_arm_effector_current_speed + 0.5 * self.right_arm_effector_pre_speed
 
-
-                # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
-                self.right_arm_target_cart_position = self.right_arm_target_cart_position + self.right_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
-                self.right_arm_target_cart_position = 0.015 * self.right_arm_target_cart_position + 0.985 * self.right_arm_effector_pre_position
-                self.right_arm_effector_pre_position = self.right_arm_target_cart_position
-
+                # # 将计算的位置和姿态对应的速度值 积分成为笛卡尔空间下的位置
+                # self.right_arm_target_cart_position = self.right_arm_effector_pre_position + self.right_arm_effector_current_speed[:3] * (self.interpolation_period / 1000)
+                # self.right_arm_target_cart_position = 0.1 * self.right_arm_target_cart_position + 0.9 * self.right_arm_effector_pre_position
+                # print(self.right_arm_effector_current_speed)
                 # 计算纯笛卡尔空间下的姿态
                 omega = self.right_arm_effector_current_speed[3:6] * self.interpolation_period / 1000
                 omega_norm = np.linalg.norm(omega)
@@ -450,7 +450,7 @@ class Force_Control():
             time.sleep(delay)  # 延迟剩余的时间
 
 
-            if flag ==1 and np.linalg.norm(FT_data_err_l) < 0.1 and np.linalg.norm(FT_data_err_r) < 0.1:
+            if flag ==1 and np.linalg.norm(FT_data_err_l) < 1 and np.linalg.norm(FT_data_err_r) < 1:
                 return
 
 
@@ -490,13 +490,17 @@ class Force_Control():
         print("⚠️ 达不到目标力，停止下压，***程序终止***")
         exit()
 
-    def desktop_wiping_force_tracking_control(self,arm='right',start_pose = None, hold_time = 0.5,wipe_direction=np.array([1.0, 0.0]), wipe_step=0.002, wipe_total_distance=0.3):
+    def desktop_wiping_force_tracking_control(self,arm='right',start_pose = None, hold_time = 0.5,wipe_direction=np.array([1.0, 0.0]), wipe_step=0.002, wipe_total_distance=0.3,
+                                              loop = 1, rotation_direction = 0, rotation_deg = 0):
         """
         执行桌面擦拭任务：
         1. 运动到起始位姿；
         2. 沿Z方向下压，直到目标力（10N）；
         3. 保持一定时间；
         4. 沿XY方向擦拭，Z方向保持恒定力。
+        loop: 循环次数
+        rotation_direction: 绕z轴旋转方向 1正-1负0不转
+        rotation_deg: 旋转角度
         """
         self.arm_FT = arm
         self.target_force_z_FT = self.right_arm_target_FT_data[2] if arm == 'right' else self.left_arm_target_FT_data[2]
@@ -516,14 +520,18 @@ class Force_Control():
         self.move_down_until_force(arm=arm,target_force=abs(self.target_force_z_FT), hold_time=0.5)
 
         print("🧽 开始擦拭...")
+        
         dx = wipe_direction[0] * wipe_total_distance
         dy = wipe_direction[1] * wipe_total_distance
         dz = 0.0
         delta = np.array([dx, dy, dz])
-        success = self.Kinematic_Model.move_relative_FT(arm, delta)
-        if not success :
-            print("❌ 超出机械臂可达空间！！！")
-            exit()
+        rot = np.array([0, 0, rotation_deg *rotation_direction])    # 绕z轴转动的具体角度
+        for i in range(loop):
+            success = self.Kinematic_Model.move_relative_FT(arm, delta, rot)
+            if not success :
+                print("❌ 超出机械臂可达空间！！！")
+                exit()
+            success = self.Kinematic_Model.move_relative_FT(arm, -delta, -rot)
                 
         print(">>> 全部完成，抬升 2 cm")
         time.sleep(2)

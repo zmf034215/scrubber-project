@@ -284,7 +284,7 @@ class Kinematic_Model:
         # self.MOVEJ.moveJ2target(target_joint_position, end_posi)
         return True
 
-    def move_relative_FT(self, arm, delta_xyz):
+    def move_relative_FT(self, arm, delta_xyz, delta_rpy):
         """
         相对当前位置移动 delta_xyz（保持姿态）
         """
@@ -302,7 +302,7 @@ class Kinematic_Model:
 
         current_position = current_pose.translation
         target_position = current_position + delta_xyz
-        R = current_pose.rotation  # 保持姿态
+        R = pinocchio.rpy.rpyToMatrix(delta_rpy) @ current_pose.rotation  # 保持姿态
 
         # 求逆解
         if arm == 'right':

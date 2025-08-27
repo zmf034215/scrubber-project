@@ -44,15 +44,17 @@ def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, targ
 
     if arm == 'right':
         # 选择右臂运动
-        right_target_cart.translation = start_pose[:3]
+        right_target_cart.translation = start_pose[:3] 
         right_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + np.array([0, 0, rotation_direction * rotation_deg]))
+
+        # rot = pin.rpy.rpyToMatrix(np.array([0, 0, rotation_direction * rotation_deg])) @ pin.rpy.rpyToMatrix(start_pose[3:])
         right_target_cart.translation[:2] += wipe_direction * wipe_total_distance
 
         left_target_cart = left_current_cart.copy()
         target_FT_data = [0,0,0,0,0,0] + target_FT
     else:
         left_target_cart.translation = start_pose[:3]
-        left_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + np.array([0, 0, rotation_direction * rotation_deg]))
+        left_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:] + [0, 0, rotation_direction * rotation_deg])
         left_target_cart.translation += wipe_direction * wipe_total_distance
 
         right_target_cart = right_current_cart.copy()
@@ -66,7 +68,8 @@ def desktop_wiping_interface(robot:robot_model, arm, start_pose, hold_time, targ
     # 擦桌子主任务
     for i in range(loop):
         print("开始擦桌子第{}次...".format(i+1))
-        robot.robot_hybrid_force_movel_to_target_cart(0.2)
+        thresold = 1 if i == 0 else 0
+        robot.robot_hybrid_force_movel_to_target_cart(thresold)
         time.sleep(0.5)
         robot.trajectory_segment_index = 0
 
@@ -97,8 +100,8 @@ if __name__ == "__main__":
     wipe_total_distance=0.35  # 擦拭运动距离
 
     # 旋转方向 
-    rotation_direction = -1  # 1代表正方向，-1代表反方向，0表示不转动
-    rotation_deg = 1.57    # 旋转角度(弧度制)
+    rotation_direction = 0 # 1代表正方向，-1代表反方向，0表示不转动
+    rotation_deg = 0    # 旋转角度(弧度制)
 
     desktop_wiping_interface(robot, arm, start_pose, hold_time, right_arm_target_FT_data, 
                              loop=3, wipe_direction=wipe_direction, wipe_total_distance=wipe_total_distance,

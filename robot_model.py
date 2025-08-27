@@ -123,7 +123,8 @@ class robot_model():
                 self.Force_Control.right_arm_target_FT_data = middle_FT_data[6:]
                 # 先在力方向上执行纯力导纳控制到指定的力阈值
                 self.Force_Control.constant_force_tracking_control(flag=1)
-                
+        
+        print("开始力位混合控制过程")
         for i in range(len(self.hybrid_force_movel_plan_left_target_cart_list)):
             with self.lcm_handler.data_lock:
                 if(self.trajectory_segment_index == 0):
