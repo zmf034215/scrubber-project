@@ -78,3 +78,25 @@
 ### torque_mode_zero_force_drag.py
 
 在机器人进入45/46状态机之后，执行该脚本之后，你可以手动拖动机械臂的各个关节到你期望的位置上去；
+
+### hybrid_force_movel_to_target_postion.py
+
+实现一个简单的力位混合控制指令（基于力传感器）
+
+### test_scrubber.py
+
+基于movel的功能测试小人形洗地机基本功能，包括：xy方向移动，z轴旋转，设置移动速度和循环次数。直接执行该脚本即可。
+
+### test_interface.py
+
+提供了输入xy方向、移动距离、z轴旋转角度、循环次数的接口。可以直接在命令行指定这些参数的值。
+示例： python test_interface.py --arm='right' --loop=5 --distance=0.5 --velocity=0.5 --rotation_deg=45
+具体参数的含义请参考脚本中的注释。
+
+### desktop_wiping_interface.py
+
+基于hybrid_force_and_pos_control实现的擦桌子功能，结合了力控和movel。其他可设置的运动参数同上
+
+### count.txt
+
+该文件用于记录当前的计数，主要用于测试手臂的运动规划功能。reset()函数会将该文件中的计数清零。

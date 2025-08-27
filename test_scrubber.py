@@ -4,7 +4,7 @@ import numpy as np
 import pinocchio as pin
 import os
 
-def test_by_position_control(robot:robot_model, arm, start_pose, hold_time, wipe_direction, wipe_step, wipe_total_distance, loop, rotation_direction, rotation_deg):
+def test_by_position_control(robot:robot_model, arm, start_pose, hold_time=0.5, wipe_direction=np.array([0.0, 1.0]), wipe_total_distance=0.1, loop=1, rotation_direction=0, rotation_deg=0, velocity=0.2):
     # 采用位置控制实现洗地机测试程度
     """
     :param robot: 机器人模型
@@ -17,13 +17,13 @@ def test_by_position_control(robot:robot_model, arm, start_pose, hold_time, wipe
     :param loop: 擦拭循环次数
     :param rotation_direction: 旋转方向，1为顺时针，-1为逆时针
     :param rotation_deg: 旋转角度
+    :param velocity: 运动速度
     """
 
     time.sleep(hold_time)
     # 运动到初始位姿
     print("开始移动到起始位姿...")
     success = robot.Kinematic_Model.move_to_start_pose(arm, start_pose)
-    
     
     if not success:
         print("❌ 起始位姿运动失败，程序终止。")
@@ -32,6 +32,7 @@ def test_by_position_control(robot:robot_model, arm, start_pose, hold_time, wipe
         print("✅ 已到达起始位姿。")
 
     robot.Force_Control.arm_FT = arm
+    robot.MOVEL.movel_plan_speed_max = velocity
     right_target_cart = pin.SE3.Identity()
     left_target_cart = pin.SE3.Identity()
     right_current_cart = robot.Kinematic_Model.right_arm_forward_kinematics(robot.lcm_handler.joint_current_pos[7:14])
@@ -124,8 +125,9 @@ if __name__ == "__main__":
     loop = 7
     rotation_direction = 1
     rotation_deg = 1
+    velocity = 0.2
     
-    test_by_position_control(robot, arm, start_pose, hold_time, wipe_direction, wipe_step, wipe_total_distance, loop, rotation_direction, rotation_deg)
+    test_by_position_control(robot, arm, start_pose, hold_time, wipe_direction, wipe_total_distance, loop, rotation_direction, rotation_deg, velocity=velocity)
     # robot.Force_Control.desktop_wiping_force_tracking_control(arm,start_pose, hold_time,wipe_direction, wipe_step, wipe_total_distance,
     #                                                           loop, rotation_direction, rotation_deg)
 
