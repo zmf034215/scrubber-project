@@ -3,3 +3,5 @@
 
 # 忽略所有 __pycache__ 目录
 __pycache__/
+
+convert_lcm_to_ros/
