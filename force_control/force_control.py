@@ -71,10 +71,10 @@ class Force_Control():
         ## 导纳控制实现恒力跟踪的参数设置
         # 逆解方案的导纳控制参数设置
         self.left_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control = np.array([0.1, 0.1, 0.1, 10, 10, 10])
-        self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 0.5, 5, 5, 5])
+        self.left_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 200, 50, 50, 50])
 
         self.right_arm_admittance_control_M_end_cartesian_space_plan_force_tracking_control = np.array([0.1, 0.1, 10, 10, 10, 10])
-        self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 100, 5, 5, 5])
+        self.right_arm_admittance_control_B_end_cartesian_space_plan_force_tracking_control = np.array([0.5, 0.5, 200, 50, 50, 50])
 
         self.interpolation_period = 2
         self.joint_target_position = None
