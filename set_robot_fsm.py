@@ -52,4 +52,4 @@ class RobotFSMController():
 
 if __name__ == "__main__":
     controller = RobotFSMController()
-    controller.set_robot_fsm(45)
+    controller.set_robot_fsm(46)

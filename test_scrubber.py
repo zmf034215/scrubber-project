@@ -4,7 +4,7 @@ import numpy as np
 import pinocchio as pin
 import os
 
-def test_by_position_control(robot:robot_model, arm, start_pose, hold_time=0.5, wipe_direction=np.array([0.0, 1.0]), wipe_total_distance=0.1, loop=1, rotation_direction=0, rotation_deg=0, velocity=0.2):
+def test_by_position_control(robot:robot_model, arm, start_position, hold_time=0.5,  push_or_not=1, loop=1, rotation_or_not=0, velocity=0.2):
     # 采用位置控制实现洗地机测试程度
     """
     :param robot: 机器人模型
@@ -20,61 +20,107 @@ def test_by_position_control(robot:robot_model, arm, start_pose, hold_time=0.5, 
     :param velocity: 运动速度
     """
 
+    # wipe_total_distance = np.array(wipe_total_distance)
+
     time.sleep(hold_time)
     # 运动到初始位姿
     print("开始移动到起始位姿...")
-    success = robot.Kinematic_Model.move_to_start_pose(arm, start_pose)
+    success = robot.Kinematic_Model.move_to_start_pose(arm, start_position)
     
     if not success:
         print("❌ 起始位姿运动失败，程序终止。")
         exit()
     else:
         print("✅ 已到达起始位姿。")
-
-    robot.Force_Control.arm_FT = arm
-    robot.MOVEL.movel_plan_speed_max = velocity
-    right_target_cart = pin.SE3.Identity()
-    left_target_cart = pin.SE3.Identity()
-    right_current_cart = robot.Kinematic_Model.right_arm_forward_kinematics(robot.lcm_handler.joint_current_pos[7:14])
-    left_current_cart = robot.Kinematic_Model.left_arm_forward_kinematics(robot.lcm_handler.joint_current_pos[:7])
-    # target_FT_data = None     
+    
+    robot.MOVEJ.movej_plan_speed_max = velocity*3
+        
+    count = memory_loop()
+    # print(f"已进行清洁循环次数： {count}")
+    # if count >= loop :
+    #     print(f"清洁循环已超过 {loop} 次，请清除循环次数，然后再次启动清洁程序！")
+    #     exit()
+    print("🧽 开始清洁...")
+    current_joint_position = robot.lcm_handler.joint_current_pos.copy()
+    target_push_joint1 = current_joint_position.copy()
+    target_push_joint2 = current_joint_position.copy()
+    if arm == "left":
+        target_push_joint1[0] = current_joint_position[0] + np.pi/6
+        target_push_joint1[3] = current_joint_position[3] + (-np.pi/6)
+        target_push_joint2[0] = -np.pi/3
+        # target_push_joint2[3] = current_joint_position[3] + np.pi/6
+        target_push_joint2[3] = np.pi/2
+    elif arm == "right" :
+        target_push_joint1[7] = current_joint_position[7] + np.pi/6
+        target_push_joint1[10] = current_joint_position[10] + (-np.pi/6)
+        target_push_joint2[7] = -np.pi/3
+        # target_push_joint2[10] = current_joint_position[10] + np.pi/6
+        target_push_joint2[10] = np.pi/2
+    else :
+        target_push_joint1[0] = current_joint_position[0] + np.pi/6
+        target_push_joint1[3] = current_joint_position[3] + (-np.pi/6)
+        target_push_joint2[0] = -np.pi/3
+        # target_push_joint2[3] = current_joint_position[3] + np.pi/6
+        target_push_joint2[3] = np.pi/2
+        target_push_joint1[7] = current_joint_position[7] + np.pi/6
+        target_push_joint1[10] = current_joint_position[10] + (-np.pi/6)
+        target_push_joint2[7] = -np.pi/3
+        # target_push_joint2[10] = current_joint_position[10] + np.pi/6
+        target_push_joint2[10] = np.pi/2
 
     current_joint_position = robot.lcm_handler.joint_current_pos.copy()
+    robot.MOVEJ.moveJ2target(current_joint_position, target_push_joint2)
+    time.sleep(0.1)
 
-    if arm == 'right':
-        right_target_cart.translation = start_pose[:3]
-        right_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:]+[0,0,rotation_direction * rotation_deg])
-        # 直接在当前目标的rpy下加上z轴的旋转角度
-        right_target_cart.translation[:2] += wipe_direction * wipe_total_distance
-        left_target_cart = left_current_cart.copy()
+    while True:
+        # robot.Kinematic_Model.move_relative(arm, wipe_total_distance)
         
+        if rotation_or_not :
+            # current_joint_position = robot.lcm_handler.joint_current_pos.copy()
+            current_joint_position = target_push_joint2
+            if arm == "left":
+                target_joint_position1 = current_joint_position.copy()
+                target_joint_position1[2] = current_joint_position[2] + (-np.pi/12)
+                target_joint_position2 = current_joint_position.copy()
+                target_joint_position2[2] = current_joint_position[2] + np.pi/12
+            elif arm =="right" :
+                target_joint_position1 = current_joint_position.copy()
+                target_joint_position1[9] = current_joint_position[9] + np.pi/12
+                target_joint_position2 = current_joint_position.copy()
+                target_joint_position2[9] = current_joint_position[9] + (-np.pi/12)
+            else :
+                target_joint_position1 = current_joint_position.copy()
+                target_joint_position1[2] = current_joint_position[2] + (-np.pi/12)
+                target_joint_position2 = current_joint_position.copy()
+                target_joint_position2[2] = current_joint_position[2] + np.pi/12
+                target_joint_position1[9] = current_joint_position[9] + np.pi/12
+                target_joint_position2[9] = current_joint_position[9] + (-np.pi/12)
+            robot.MOVEJ.moveJ2target(current_joint_position, target_joint_position1)
+            time.sleep(0.1)
+            robot.MOVEJ.moveJ2target(target_joint_position1,current_joint_position)
+            time.sleep(0.1)
+            robot.MOVEJ.moveJ2target(current_joint_position, target_joint_position2)
+            time.sleep(0.1)
+            robot.MOVEJ.moveJ2target(target_joint_position2,current_joint_position)
+            time.sleep(0.1)
+        # robot.Kinematic_Model.move_relative(arm, -(wipe_total_distance))
+        if push_or_not :
+            current_joint_position = robot.lcm_handler.joint_current_pos.copy()
+            # robot.MOVEJ.moveJ2target(current_joint_position, target_push_joint1)
+            robot.MOVEJ.moveJ2target(target_push_joint2, target_push_joint1)
+            time.sleep(0.1)
+            robot.MOVEJ.moveJ2target(target_push_joint1,target_push_joint2)
+            time.sleep(0.1)
 
-    else:
-        left_target_cart.translation = start_pose[:3]
-        left_target_cart.rotation = pin.rpy.rpyToMatrix(start_pose[3:]+[0,0,rotation_direction * rotation_deg])
-        # 直接在当前目标的rpy下加上z轴的旋转角度
-        left_target_cart.translation[:2] += wipe_direction * wipe_total_distance
-        right_target_cart = right_current_cart.copy()
-
-    # robot.movel_plan_target_position_list = [target_joint_position, current_joint_position]
-
-    # 开始擦拭
-    print("🧽 开始擦拭...")
-    for i in range(loop):
-        print("开始擦桌子第{}次...".format(i+1))
-        # robot.robot_movel_to_target_position()
-        robot.MOVEL.moveL2target(left_current_cart, left_target_cart, right_current_cart, right_target_cart, current_joint_position)
-        # 如果逆解失败
-        if (robot.Kinematic_Model.left_arm_inverse_kinematics_solution_success_flag and robot.Kinematic_Model.right_arm_inverse_kinematics_solution_success_flag) == False:
-            return
+        # 循环记录
+        count += 1
+        with open("count.txt", "w") as f:
+            f.write(str(count))
+        print(f"已进行清洁循环次数：  {count}")
+        if count >= loop :
+            print(f"已清洁循环 {loop} 次，结束清洁！！")
+            exit()
         
-        current_joint_position = robot.lcm_handler.joint_current_pos.copy()
-        # 回走
-        robot.MOVEL.moveL2target(left_target_cart, left_current_cart, right_target_cart, right_current_cart, current_joint_position)
-        time.sleep(0.5)
-        # robot.trajectory_segment_index = 0
-        memory_loop()
-
 def memory_loop(path="count.txt"):
     if not os.path.exists(path):
         # 不存在文件创建文件
@@ -89,10 +135,8 @@ def memory_loop(path="count.txt"):
         else:
             f.write('0')
             count = 0
-
-    count += 1
-    with open(path, "w") as f:
-        f.write(str(count))
+    return count
+    
 
 
 def reset_count(path="count.txt"):
@@ -104,38 +148,32 @@ def reset_count(path="count.txt"):
 if __name__ == "__main__":
     robot = robot_model()
     time.sleep(1)
-    reset_count()
+    # reset_count()
 
     # 设置运动控制接口到Kinematic_Model中
     robot.Force_Control.Kinematic_Model.set_robot_interface(robot.MOVEJ, robot.MOVEL, robot.lcm_handler)
 
     # 设置目标臂和起始位姿
     # arm = 'left'
-    # start_pose = np.array([0.3, 0.45, 0.2, 1.8, 0.75, -1.8])  # [x, y, z, roll, pitch, yaw]
-
-    arm = 'right'
-    start_pose = np.array([0.3, -0.55, 0.2, -1.8, 0.75, 1.8])  # [x, y, z, roll, pitch, yaw]
-
-    # robot.Force_Control.left_arm_target_FT_data = np.array([0, 0, 3, 0, 0, 0])
-    # robot.Force_Control.right_arm_target_FT_data = np.array([0, 0, 2, 0, 0, 0])
-    hold_time= 0.5    #  运动到擦拭起始位置后，暂停保持当前位置的时间 秒
-    wipe_direction=np.array([-1 ,  0])  #  擦拭运动方向X、Y，左臂=[0.0, -1.0]，右臂=[0.0, 1.0]
-    wipe_step=0.002   # 擦拭运动步长
-    wipe_total_distance=0.3  # 擦拭运动距离
-    loop = 7
-    rotation_direction = 1
-    rotation_deg = 1
-    velocity = 0.2
+    # arm = 'right'
+    arm = 'both'
+    start_position = [-0.1,  0.2,  0, 0.3,  0, 0, 0,
+                      -0.1, -0.2, -0, 0.3, -0, 0, 0]  # 关节角度 弧度
     
-    test_by_position_control(robot, arm, start_pose, hold_time, wipe_direction, wipe_total_distance, loop, rotation_direction, rotation_deg, velocity=velocity)
-    # robot.Force_Control.desktop_wiping_force_tracking_control(arm,start_pose, hold_time,wipe_direction, wipe_step, wipe_total_distance,
-    #                                                           loop, rotation_direction, rotation_deg)
+    hold_time= 0.5    #  运动到擦拭起始位置后，暂停保持当前位置的时间 秒
+    loop = 77
+    push_or_not = 1   #  0： 不进行推拉， 1： 进行推拉
+    rotation_or_not = 1    # 0: 不进行扭转，1： 进行扭转
+    velocity = 0.6   # 关节转动速度
 
+    count = memory_loop()
+    print(f"已进行清洁循环次数： {count}")
+    if count >= loop :
+        print(f"清洁循环已超过 {loop} 次，请清除循环次数，然后再次启动清洁程序！")
+        exit()
+  
+    test_by_position_control(robot, arm, start_position, hold_time, push_or_not, loop, rotation_or_not, velocity=velocity)
+    
     # 采用纯位置控制实现洗地机测试程度
 
-
-    # for cycle in range(3):  # 往返3次
-    #     robot.Force_Control.desktop_wiping_force_tracking_control(arm, start_pose, hold_time, 
-    #                                                             wipe_direction, wipe_step, wipe_total_distance)
-    #     # 改变方向，回走
-    #     wipe_direction = -wipe_direction
+   

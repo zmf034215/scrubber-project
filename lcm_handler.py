@@ -53,16 +53,16 @@ class LCMHandler:
         self.lcm.subscribe('ecat_debug_FT_dataARM_FT_R', self.FT_right_data_listener)
 
         # 上半身伺服模式设置 用于upper_body_cmd数据下发
-        self.default_arm_control_mode = [ 4 for dim0 in range(14) ]
-        self.default_hand_control_mode = [ 4 for dim0 in range(12) ]
-        self.default_waist_control_mode = [ 4 for dim0 in range(2) ]
-        self.default_head_control_mode = [ 4 for dim0 in range(2) ]
+        self.default_arm_control_mode = [ 3 for dim0 in range(14) ]
+        self.default_hand_control_mode = [ 3 for dim0 in range(12) ]
+        self.default_waist_control_mode = [ 3 for dim0 in range(2) ]
+        self.default_head_control_mode = [ 3 for dim0 in range(2) ]
         
         # 两个手臂的六七关节伺服模式设置为模式5
-        self.default_arm_control_mode[5] = 5
-        self.default_arm_control_mode[6] = 5
-        self.default_arm_control_mode[12] = 5
-        self.default_arm_control_mode[13] = 5
+        self.default_arm_control_mode[5] = 3
+        self.default_arm_control_mode[6] = 3
+        self.default_arm_control_mode[12] = 3
+        self.default_arm_control_mode[13] = 3
         self.default_control_mode = self.default_arm_control_mode \
                                     + self.default_hand_control_mode \
                                     + self.default_waist_control_mode \
@@ -147,8 +147,14 @@ class LCMHandler:
         arm_and_hand_ctrl_msg.isUsed = 0
         arm_and_hand_ctrl_msg.control_mode = self.default_control_mode
         arm_and_hand_ctrl_msg.jointPosVec = package.tolist()
-        arm_and_hand_ctrl_msg.jointKp = (np.ones(30) * 40).tolist()
-        arm_and_hand_ctrl_msg.jointKd = (np.ones(30) * 100).tolist()
+        # arm_and_hand_ctrl_msg.jointKp = (np.ones(30) * 400).tolist()
+        # arm_and_hand_ctrl_msg.jointKd = (np.ones(30) * 7).tolist()
+        arm_and_hand_ctrl_msg.jointKp = (np.ones(30) * 0).tolist()
+        arm_and_hand_ctrl_msg.jointKd = (np.ones(30) * 0).tolist()
+        arm_and_hand_ctrl_msg.jointKp[:5] = [120, 500, 500, 500, 500]
+        arm_and_hand_ctrl_msg.jointKp[7:12] = [120, 500, 500, 500, 500]
+        arm_and_hand_ctrl_msg.jointKd[:5] = [6, 14, 10, 13, 11] 
+        arm_and_hand_ctrl_msg.jointKd[7:12] = [6, 14, 10, 13, 11] 
 
         if self.plan_pre_qpos is None:
             speed = np.zeros_like(package)
