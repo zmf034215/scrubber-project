@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import csv
+from scipy.interpolate import interp1d
 from lcm_handler import LCMHandler
 from trajectory_plan.moveJ import MOVEJ
 from trajectory_plan.moveL import MOVEL
@@ -177,19 +178,56 @@ class robot_model():
                 self.trajectory_segment_index = self.trajectory_segment_index + 1
 
     
-    def get_csv_position_and_interpolation(self):
-        with open('offline_say_hi_05_1105_new.csv', mode='r', newline='', encoding='utf-8') as file:
+    def get_csv_position_and_interpolation(self, csv_filename, speed_scale):
+        # Step 1: 读取CSV所有点位到列表中
+        with open(csv_filename, mode='r', newline='', encoding='utf-8') as file:
             reader = (csv.reader(file))
+            reader = (csv.reader(file))
+            reader = list(reader)  # 读取所有数据为列表
+            reader = self.resample_csv_trajectory(reader,speed_scale)  # 通过speed_scale的设置来对csv文件中的轨迹进行调速
+            csv_positions = [np.array([float(item) for item in row]) for row in reader]
 
-            for row in reader:
-                start_time = time.time()  # 记录循环开始的时间
-                row = [float(item) for item in row]
-                interpolation_result = np.array(row)
+        if not csv_positions:
+            print("CSV文件为空！")
+            return
+        
+        # Step 3: 设置MOVEJ的目标列表为 [当前点, csv第一个点]
+        self.movej_plan_target_position_list = [csv_positions[0]]
+        self.trajectory_segment_index = 0  # 重置轨迹段索引
+        self.robot_movej_to_target_position()  # 运动到CSV的起始点
 
-                self.lcm_handler.upper_body_data_publisher(interpolation_result)
+        # Step 4: 等待稳定一段时间（可选）
+        time.sleep(0.5)
 
-                # 用于保证下发周期是2ms
-                elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
-                delay = max(0, self.csv_position_publish_period / 1000 - elapsed_time)  # 4毫秒减去已经过的时间
-                time.sleep(delay)  # 延迟剩余的时间
-            print("CSV文件点位运行结束！！！！")
+        # Step 5: 按2ms周期开始发布CSV数据
+        for row in csv_positions:
+            start_time = time.time()  # 记录循环开始的时间
+            
+            self.lcm_handler.upper_body_data_publisher(row)
+
+            # 用于保证下发周期是2ms
+            elapsed_time = (time.time() - start_time)  # 已经过的时间，单位是秒
+            delay = max(0, self.csv_position_publish_period / 1000 - elapsed_time)  # 4毫秒减去已经过的时间
+            time.sleep(delay)  # 延迟剩余的时间
+        print("CSV文件点位运行结束！！！！")
+
+    def resample_csv_trajectory(self, points: np.ndarray, speed_scale: float):   # 通过speed_scale的设置来对csv文件中的轨迹进行调速
+        """
+        根据 speed_scale 对轨迹点进行插值或抽稀
+        - speed_scale > 1 → 抽稀 → 快
+        - speed_scale < 1 → 插值 → 慢
+        """
+        # from scipy.interpolate import interp1d
+        assert speed_scale > 0, "speed_scale 必须大于 0"
+        original_len = len(points)
+        new_len = int(original_len / speed_scale)
+
+        if new_len < 2:
+            raise ValueError("调整后的轨迹点太少，speed_scale 太大")
+    
+        x_old = np.linspace(0, 1, original_len)
+        x_new = np.linspace(0, 1, new_len)
+
+        interpolated = interp1d(x_old, points, axis=0)(x_new)
+        return interpolated
+    
