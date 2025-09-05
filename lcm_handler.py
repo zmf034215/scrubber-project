@@ -1,6 +1,7 @@
 from lcm_data_structure.upper_body_cmd_package import upper_body_cmd_package
 from lcm_data_structure.upper_body_data_package import upper_body_data_package
 from lcm_data_structure.ecat_debug_ft_data_lcmt import ecat_debug_ft_data_lcmt
+from dynamics_related_functions.impedance_control import Impedance_Control
 
 import lcm
 import threading
@@ -30,7 +31,10 @@ class LCMHandler:
         self.data_lock = threading.Lock() 
         self.left_arm_joint_pre_speed = np.array([0, 0, 0, 0, 0, 0, 0])
         self.right_arm_joint_pre_speed = np.array([0, 0, 0, 0, 0, 0, 0])
-
+        
+        # 初始化阻抗控制函数
+        self.impedance_control = Impedance_Control()
+        
         # 力传感器原始数据
         self.left_arm_FT_original =[0.0 for i in range(6)]
         self.right_arm_FT_original =[0.0 for i in range(6)]
@@ -139,7 +143,7 @@ class LCMHandler:
                                                    -ft_data[3], -ft_data[4], ft_data[5]])
 
     # 位置模式 传入的参数是期望运行的位置数据
-    def upper_body_data_publisher(self, package):
+    def upper_body_data_publisher(self, package):  # package 30*1
         """
         将输入的关节位姿转换为 LCM 消息
         """
@@ -168,6 +172,11 @@ class LCMHandler:
         arm_and_hand_ctrl_msg.jointCurrentVec = np.zeros_like(package).tolist()
         arm_and_hand_ctrl_msg.jointTorqueVec = np.zeros_like(package).tolist()
 
+        # 若启用阻抗，则执行if
+        if self.impedance_control.impedance_control_flag :           
+            jointTorq_impedance = self.impedance_control.impedance_jointTorq(self.joint_current_pos, self.joint_current_speed, package, arm_and_hand_ctrl_msg.jointSpeedVec, acc)   # 14*1  (实际位置，实际速度，期望位置，期望速度，期望加速度 )
+            arm_and_hand_ctrl_msg.jointTorqueVec[:14] = jointTorq_impedance
+        
         # 更新历史数据
         self.plan_pre_qpos = np.copy(package)
         self.plan_pre_speed = np.copy(speed)

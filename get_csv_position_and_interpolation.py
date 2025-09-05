@@ -13,7 +13,6 @@ if __name__ == "__main__":
 
     robot = robot_model()
     time.sleep(1)
-
     speed_scale = 1  # 设置csv轨迹复现的速度调节参数
     max_recycle = 3
     count = 0

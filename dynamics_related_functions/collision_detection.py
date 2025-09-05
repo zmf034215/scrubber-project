@@ -36,6 +36,12 @@ class Collision_Detection():
         self.collision_detection_cal_threading_start = 0
 
     def start_collision_detection(self):
+        # 判断碰撞和阻抗的启用选择
+        if (( self.collision_detection_level != 0 ) & (self.lcm_handler.impedance_control.impedance_control_flag != 0 )) :
+            print(f"collision level : {self.collision_detection_level}")
+            print(f"impedance_control_flag : {self.lcm_handler.impedance_control.impedance_control_flag}")
+            print("collision_detection_level 和 impedance_control.impedance_control_flag 不能同时设置为非零！！！")
+            exit()
         self.collision_detection_cal_period = 0.002
         self.collision_detection_cal_threading_data_lock = threading.Lock()
         self.collision_detection_cal_threading_running = True
